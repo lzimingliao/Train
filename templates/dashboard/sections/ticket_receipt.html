@@ -1,0 +1,52 @@
+{% if latest_order %}
+<div class="ticket-receipt">
+    <div class="receipt-main">
+        <div class="r-header">
+            <span>电子客票凭证 (e-Ticket)</span>
+            <span>订单号: {{ latest_order.order_id }}</span>
+        </div>
+        <div class="r-route">
+            <div class="r-station">{{ latest_order.train.dep_station }}</div>
+            <div class="r-train">
+                <span>{{ latest_order.train_no }}</span>
+                <i class="fas fa-long-arrow-alt-right" style="margin-top: 4px; color: #cbd5e1;"></i>
+            </div>
+            <div class="r-station">{{ latest_order.train.arr_station }}</div>
+        </div>
+        <div class="r-details">
+            <div class="r-item">
+                <span class="r-label">出发时间</span>
+                <span class="r-val" style="color: var(--rail-accent);">{{ latest_order.train.dep_time.strftime('%Y-%m-%d %H:%M') }}</span>
+            </div>
+            <div class="r-item">
+                <span class="r-label">到达时间</span>
+                <span class="r-val">{{ latest_order.train.arr_time.strftime('%Y-%m-%d %H:%M') }}</span>
+            </div>
+            <div class="r-item">
+                <span class="r-label">停止检票时间</span>
+                <span class="r-val" id="checkin-time" style="color: var(--danger-color);"></span>
+                <script>
+                    (function () {
+                        var depDate = new Date("{{ latest_order.train.dep_time.strftime('%Y-%m-%dT%H:%M:%S') }}");
+                        depDate.setMinutes(depDate.getMinutes() - 15);
+                        var yy = depDate.getFullYear();
+                        var mm = String(depDate.getMonth() + 1).padStart(2, '0');
+                        var dd = String(depDate.getDate()).padStart(2, '0');
+                        var hh = String(depDate.getHours()).padStart(2, '0');
+                        var min = String(depDate.getMinutes()).padStart(2, '0');
+                        document.getElementById('checkin-time').innerText = yy + "-" + mm + "-" + dd + " " + hh + ":" + min;
+                    })();
+                </script>
+            </div>
+            <div class="r-item">
+                <span class="r-label">乘车人</span>
+                <span class="r-val">{{ session.get('name', '旅客') }} <span style="font-weight:400; font-size:12px; color:#9ca3af;">({{ safe_id_num[:4] }}***)</span></span>
+            </div>
+        </div>
+    </div>
+    <div class="receipt-side">
+        <div class="side-seat">{{ latest_order.seat_no }}</div>
+        <div class="side-price">实付款: ¥{{ latest_order.price }}</div>
+    </div>
+</div>
+{% endif %}

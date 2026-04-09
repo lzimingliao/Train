@@ -1,0 +1,26 @@
+{% if active_tab == 'profile' %}
+<div class="panel-card" style="max-width: 800px;">
+    <div class="card-header"><i class="fas fa-id-card"></i> 账号基本资料</div>
+    <form action="/update_profile" method="POST">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+            <div class="input-group">
+                <label>登录账号</label>
+                <input type="text" name="username" value="{{ user.username }}" required>
+            </div>
+            <div class="input-group">
+                <label>真实姓名</label>
+                <input type="text" name="name" value="{{ user.name }}" required>
+            </div>
+            <div class="input-group">
+                <label>联系电话</label>
+                <input type="text" name="phone" value="{{ user.phone or '' }}" placeholder="请输入11位手机号">
+            </div>
+            <div class="input-group">
+                <label>证件号码 (系统主键，不可修改)</label>
+                <input type="text" value="{{ user.id_num }}" readonly disabled>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> 保存修改</button>
+    </form>
+</div>
+{% endif %}

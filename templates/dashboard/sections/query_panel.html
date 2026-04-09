@@ -1,0 +1,27 @@
+{% if active_tab == 'book' or active_tab == 'query' %}
+<div class="panel-card">
+    <div class="card-header"><i class="fas fa-filter"></i> 车票查询条件</div>
+    <div style="display: flex; gap: 40px; flex-wrap: wrap;">
+        <form action="/do_query" method="GET" style="flex: 1; min-width: 300px;">
+            <input type="hidden" name="search_type" value="interval">
+            <input type="hidden" name="source_tab" value="{{ active_tab }}">
+            <div class="form-row">
+                <div class="input-group"><label>乘车日期</label><input type="date" name="date" required></div>
+                <div class="input-group"><label>出发地 (支持模糊)</label><input type="text" name="start_station" required placeholder="例如: 北京"></div>
+                <div class="input-group"><label>目的地</label><input type="text" name="end_station" required placeholder="例如: 上海"></div>
+            </div>
+            <button class="btn btn-primary" style="width: 100%;"><i class="fas fa-search"></i> 查询区间车次</button>
+        </form>
+        <div style="width: 1px; background: #e5e7eb;"></div>
+        <form action="/do_query" method="GET" style="flex: 1; min-width: 300px;">
+            <input type="hidden" name="search_type" value="station">
+            <input type="hidden" name="source_tab" value="{{ active_tab }}">
+            <div class="form-row">
+                <div class="input-group"><label>乘车日期</label><input type="date" name="date" required></div>
+                <div class="input-group"><label>途径车站</label><input type="text" name="station" placeholder="例如: 南京南" required></div>
+            </div>
+            <button class="btn btn-outline" style="width: 100%;"><i class="fas fa-list"></i> 查询车站所有班次</button>
+        </form>
+    </div>
+</div>
+{% endif %}

@@ -1,0 +1,39 @@
+{% if active_tab == 'reschedule' %}
+{% if reschedule_order_id %}
+<div class="panel-card" style="border-color: #93c5fd; background: #eff6ff;">
+    <div class="card-header" style="color: #1e40af;"><i class="fas fa-info-circle"></i> 正在为订单 [{{ reschedule_order_id }}] 办理改签</div>
+    <form action="/do_query" method="GET" class="form-row" style="margin-bottom:0;">
+        <input type="hidden" name="search_type" value="interval">
+        <input type="hidden" name="source_tab" value="reschedule">
+        <input type="hidden" name="reschedule_order_id" value="{{ reschedule_order_id }}">
+        <div class="input-group"><label>期望日期</label><input type="date" name="date" required></div>
+        <div class="input-group"><label>出发地</label><input type="text" name="start_station" required></div>
+        <div class="input-group"><label>目的地</label><input type="text" name="end_station" required></div>
+        <button class="btn btn-primary" style="align-self: flex-end;"><i class="fas fa-search"></i> 检索可改签车次</button>
+    </form>
+</div>
+{% else %}
+<div class="panel-card">
+    <div class="card-header"><i class="fas fa-list-ul"></i> 可改签订单列表</div>
+    <table>
+        <tr><th>订单编号</th><th>车次与行程</th><th>发车时间</th><th>当前座位</th><th>操作</th></tr>
+        {% for order in active_orders %}
+        <tr>
+            <td style="font-family: monospace; color: #4b5563;">{{ order.order_id }}</td>
+            <td>
+                <strong>{{ order.train_no }}</strong><br>
+                <span style="font-size:13px; color:#6b7280;">{{ order.train.dep_station }} ➔ {{ order.train.arr_station }}</span>
+            </td>
+            <td style="font-weight: 500;">{{ order.train.dep_time.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td><span class="badge badge-blue">{{ order.seat_no }}</span></td>
+            <td>
+                <a href="/do_query?search_type=interval&source_tab=reschedule&reschedule_order_id={{ order.order_id }}&date={{ order.train.dep_time.strftime('%Y-%m-%d') }}&start_station={{ order.train.dep_station }}&end_station={{ order.train.arr_station }}" class="btn btn-outline"><i class="fas fa-edit"></i> 申请改签</a>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align: center; padding: 40px; color:#9ca3af;">暂无可改签的有效订单</td></tr>
+        {% endfor %}
+    </table>
+</div>
+{% endif %}
+{% endif %}

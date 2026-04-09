@@ -83,7 +83,7 @@ def register_page():
         db.session.commit()
         user_cache.add_user(username, id_num)
         flash(
-            f"实名档案建立成功！您的系统分配唯一ID为：{new_user.user_id}，请登录使用系统。",
+            "实名档案建立成功！请登录使用系统。",
             "success",
         )
         return redirect(url_for("main.login_page"))
