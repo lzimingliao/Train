@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from functools import wraps
 
@@ -42,7 +43,20 @@ def get_active_orders(user_id):
     return Order.query.filter(
         Order.user_id == user_id,
         Order.status.in_(["已出票", "已改签"]),
+        Order.dep_time > datetime.now(),
     ).all()
+
+
+def is_departed(dep_time):
+    return dep_time <= datetime.now()
+
+
+def resize_seat_map(seat_map_json, new_total):
+    seats = json.loads(seat_map_json)
+    if new_total <= len(seats):
+        return json.dumps(seats[:new_total])
+    seats.extend([False] * (new_total - len(seats)))
+    return json.dumps(seats)
 
 
 def permission_required(module, function):
@@ -174,10 +188,13 @@ def do_query():
                 "error",
             )
             return redirect(url_for("main.index"))
+        if start_station == end_station:
+            flash("出发站和到达站不能相同", "error")
+            return redirect(url_for("main.index"))
         raw_trains = Train.query.filter(
             db.func.date(Train.dep_time) == date_str,
-            Train.dep_station.ilike(f"%{start_station}%"),
-            Train.arr_station.ilike(f"%{end_station}%"),
+            Train.dep_station == start_station,
+            Train.arr_station == end_station,
         ).all()
         search_results = quick_sort_trains(raw_trains)
 
@@ -192,8 +209,8 @@ def do_query():
         raw_trains = Train.query.filter(
             db.func.date(Train.dep_time) == date_str,
             db.or_(
-                Train.dep_station.ilike(f"%{station}%"),
-                Train.arr_station.ilike(f"%{station}%"),
+                Train.dep_station == station,
+                Train.arr_station == station,
             ),
         ).all()
         search_results = bubble_sort_by_time(raw_trains)
@@ -222,6 +239,10 @@ def book_ticket():
 
     if not train or train.rem_seats <= 0:
         flash("该车次无余票", "error")
+        return redirect(url_for("main.index"))
+
+    if is_departed(train.dep_time):
+        flash("该车次已发车，无法订票", "error")
         return redirect(url_for("main.index"))
 
     new_seat_map, seat = allocate_seat_by_type(train.seat_map, seat_type)
@@ -261,13 +282,8 @@ def book_ticket():
         latest_order=new_order,
         orders=orders,
         active_orders=active_orders,
+        now_time=datetime.now(),
     )
-
-
-@main_bp.route("/refund_ui")
-@permission_required("ticket_module", "refund")
-def refund_ui():
-    return redirect(url_for("main.orders_ui"))
 
 
 @main_bp.route("/orders_ui")
@@ -276,7 +292,11 @@ def orders_ui():
     orders = get_user_orders(session.get("user_id"))
     active_orders = get_active_orders(session.get("user_id"))
     return render_template(
-        "index.html", active_tab="orders", orders=orders, active_orders=active_orders
+        "index.html",
+        active_tab="orders",
+        orders=orders,
+        active_orders=active_orders,
+        now_time=datetime.now(),
     )
 
 
@@ -285,6 +305,9 @@ def orders_ui():
 def delete_order(order_id):
     order = Order.query.get(order_id)
     if order and order.user_id == session.get("user_id"):
+        if is_departed(order.dep_time):
+            flash("该车票已发车，无法退票", "error")
+            return redirect(url_for("main.orders_ui"))
         try:
             train = Train.query.get(order.train_no)
             if train:
@@ -299,12 +322,6 @@ def delete_order(order_id):
             flash("退票失败，请稍后重试", "error")
     else:
         flash("订单不存在或无权限", "error")
-    return redirect(url_for("main.orders_ui"))
-
-
-@main_bp.route("/reschedule_ui")
-@permission_required("ticket_module", "reschedule")
-def reschedule_ui():
     return redirect(url_for("main.orders_ui"))
 
 
@@ -328,6 +345,14 @@ def do_reschedule():
     old_train = Train.query.get(order.train_no)
     if not old_train:
         flash("改签失败：原车次不存在", "error")
+        return redirect(url_for("main.orders_ui"))
+
+    if is_departed(order.dep_time) or is_departed(old_train.dep_time):
+        flash("改签失败：原车次已发车", "error")
+        return redirect(url_for("main.orders_ui"))
+
+    if is_departed(new_train.dep_time):
+        flash("改签失败：目标车次已发车", "error")
         return redirect(url_for("main.orders_ui"))
 
     if (
@@ -392,6 +417,7 @@ def do_reschedule():
         latest_order=order,
         orders=orders,
         active_orders=active_orders,
+        now_time=datetime.now(),
     )
 
 
@@ -499,6 +525,9 @@ def admin_manage_train():
                 "error",
             )
             return redirect(url_for("main.trains_page"))
+        if dep_station == arr_station:
+            flash("出发站和到达站不能相同", "error")
+            return redirect(url_for("main.trains_page"))
 
         dep_time_str = request.form.get("dep_time", "").replace("T", " ")
         arr_time_str = request.form.get("arr_time", "").replace("T", " ")
@@ -516,8 +545,8 @@ def admin_manage_train():
         if dep_time >= arr_time:
             flash("时间错误：到达时间必须晚于出发时间", "error")
             return redirect(url_for("main.trains_page"))
-        if price < 0 or total_seats < 0:
-            flash("票价和座位数不能为负", "error")
+        if price < 0 or total_seats < 0 or carriage_count <= 0:
+            flash("票价不能为负，座位数不能为负，车厢数必须大于0", "error")
             return redirect(url_for("main.trains_page"))
 
         t = Train(
@@ -540,6 +569,70 @@ def admin_manage_train():
             db.session.rollback()
             current_app.logger.exception("admin_manage_train add failed: %s", exc)
             flash("新增车次失败", "error")
+
+    elif action == "edit":
+        train = Train.query.get(train_no)
+        if not train:
+            flash("车次不存在", "error")
+            return redirect(url_for("main.trains_page"))
+
+        dep_station = request.form.get("dep_station", "").strip()
+        arr_station = request.form.get("arr_station", "").strip()
+        if not validate_station_name(dep_station) or not validate_station_name(
+            arr_station
+        ):
+            flash(
+                "站名格式错误（仅限中英文、数字、空格、短横线，最长30）",
+                "error",
+            )
+            return redirect(url_for("main.trains_page"))
+        if dep_station == arr_station:
+            flash("出发站和到达站不能相同", "error")
+            return redirect(url_for("main.trains_page"))
+
+        dep_time_str = request.form.get("dep_time", "").replace("T", " ")
+        arr_time_str = request.form.get("arr_time", "").replace("T", " ")
+
+        try:
+            dep_time = datetime.strptime(dep_time_str, "%Y-%m-%d %H:%M")
+            arr_time = datetime.strptime(arr_time_str, "%Y-%m-%d %H:%M")
+            price = float(request.form.get("price", 0))
+            total_seats = int(request.form.get("total_seats", 0))
+            carriage_count = int(request.form.get("carriage_count", 5))
+        except ValueError:
+            flash("时间或数值格式错误", "error")
+            return redirect(url_for("main.trains_page"))
+
+        if dep_time >= arr_time:
+            flash("时间错误：到达时间必须晚于出发时间", "error")
+            return redirect(url_for("main.trains_page"))
+
+        if price < 0 or total_seats < 0 or carriage_count <= 0:
+            flash("票价不能为负，座位数不能为负，车厢数必须大于0", "error")
+            return redirect(url_for("main.trains_page"))
+
+        booked_count = train.total_seats - train.rem_seats
+        if total_seats < booked_count:
+            flash("修改失败：总座位数不能小于已售座位数", "error")
+            return redirect(url_for("main.trains_page"))
+
+        try:
+            train.dep_station = dep_station
+            train.arr_station = arr_station
+            train.dep_time = dep_time
+            train.arr_time = arr_time
+            train.price = price
+            train.carriage_count = carriage_count
+            train.seat_map = resize_seat_map(train.seat_map, total_seats)
+            train.total_seats = total_seats
+            train.rem_seats = total_seats - booked_count
+
+            db.session.commit()
+            flash(f"车次 {train_no} 已更新", "success")
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.exception("admin_manage_train edit failed: %s", exc)
+            flash("更新车次失败", "error")
 
     return redirect(url_for("main.trains_page"))
 
@@ -572,6 +665,14 @@ def admin_manage_user():
             flash("更新失败，请稍后重试", "error")
 
     elif action == "delete" and user.role != "admin":
+        active_order = Order.query.filter(
+            Order.user_id == user.user_id,
+            Order.status.in_(["已出票", "已改签"]),
+        ).first()
+        if active_order:
+            flash("删除失败：该用户存在有效订单，请先退票", "error")
+            return redirect(url_for("main.users_page"))
+
         try:
             username_to_remove = user.username
             id_num_to_remove = user.id_num
@@ -583,5 +684,8 @@ def admin_manage_user():
             db.session.rollback()
             current_app.logger.exception("admin_manage_user delete failed: %s", exc)
             flash("删除失败：存在关联订单", "error")
+
+    elif action == "delete" and user.role == "admin":
+        flash("不允许删除管理员账号", "error")
 
     return redirect(url_for("main.users_page"))

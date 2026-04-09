@@ -12,6 +12,7 @@
             <table>
                 <tr><th>车次</th><th>出发 / 到达</th><th>出发 / 到达时间</th><th>票价</th><th>余票</th><th>操作</th></tr>
                 {% for t in search_results %}
+                {% set departed = t.dep_time <= now_time %}
                 <tr>
                     <td><strong style="font-size:18px;">{{ t.train_no }}</strong></td>
                     <td>
@@ -27,15 +28,19 @@
                         <span class="badge {% if t.rem_seats>0 %}badge-green{% else %}badge-red{% endif %}">余票: {{ t.rem_seats }}</span>
                     </td>
                     <td>
-                        {% if t.rem_seats > 0 %}
+                        {% if departed %}
+                            <span class="badge badge-gray">已发车</span>
+                        {% elif t.rem_seats > 0 %}
                             {% if active_tab == 'book' %}
                                 <form action="/book_ticket" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                     <input type="hidden" name="train_no" value="{{ t.train_no }}">
                                     {% include 'dashboard/sections/seat_selector.html' %}
                                     <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> 确认订票</button>
                                 </form>
                             {% elif active_tab == 'orders' and reschedule_order_id %}
                                 <form action="/do_reschedule" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                     <input type="hidden" name="order_id" value="{{ reschedule_order_id }}">
                                     <input type="hidden" name="new_train_no" value="{{ t.train_no }}">
                                     {% include 'dashboard/sections/seat_selector.html' %}
@@ -56,6 +61,7 @@
     {% else %}
     {% set empty_icon = 'fa-search' %}
     {% set empty_message = '未找到符合条件的车次' %}
+    {% set empty_hint = '请检查日期和站名，站名需按全称精确匹配。' %}
     {% include 'dashboard/sections/empty_state.html' %}
     {% endif %}
 {% endif %}

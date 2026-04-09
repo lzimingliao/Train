@@ -1,7 +1,8 @@
 import os
+import secrets
 from datetime import datetime
 
-from flask import Flask
+from flask import Flask, abort, request, session
 
 from extensions import db
 from models import Train, User
@@ -22,6 +23,28 @@ def create_app():
     db.init_app(app)
 
     app.register_blueprint(main_bp)
+
+    def get_or_create_csrf_token():
+        token = session.get("_csrf_token")
+        if not token:
+            token = secrets.token_urlsafe(24)
+            session["_csrf_token"] = token
+        return token
+
+    @app.before_request
+    def csrf_protect():
+        if request.method == "POST":
+            sent_token = request.form.get("csrf_token", "")
+            expected_token = session.get("_csrf_token", "")
+            if not expected_token or sent_token != expected_token:
+                abort(400, description="CSRF token invalid")
+
+    @app.context_processor
+    def inject_template_context():
+        return {
+            "now_time": datetime.now(),
+            "csrf_token": get_or_create_csrf_token(),
+        }
 
     with app.app_context():
         db.create_all()

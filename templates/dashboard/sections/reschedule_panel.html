@@ -15,6 +15,7 @@
 {% else %}
 <div class="panel-card">
     <div class="card-header"><i class="fas fa-list-ul"></i> 可改签订单</div>
+    <p class="section-note">仅展示未发车订单。改签规则：同日同区间，或同车次改期。</p>
     {% if active_orders and active_orders|length > 0 %}
     <div class="table-shell">
         <table>
@@ -29,7 +30,11 @@
                 <td style="font-weight: 500;">{{ order.train.dep_time.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td><span class="badge badge-blue">{{ order.seat_no }}</span></td>
                 <td>
+                    {% if order.dep_time > now_time %}
                     <a href="/do_query?search_type=interval&source_tab=orders&reschedule_order_id={{ order.order_id }}&date={{ order.train.dep_time.strftime('%Y-%m-%d') }}&start_station={{ order.train.dep_station }}&end_station={{ order.train.arr_station }}" class="btn btn-outline btn-sm"><i class="fas fa-edit"></i> 改签</a>
+                    {% else %}
+                    <span style="font-size:13px; color:#9ca3af;">已过发车</span>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

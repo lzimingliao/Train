@@ -7,6 +7,8 @@
     <title>控制台 - 火车票管理系统</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=ZCOOL+XiaoWei&display=swap');
+
         :root {
             --rail-blue: #0a3d81;
             --rail-blue-deep: #072b5b;
@@ -29,7 +31,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
         }
 
         body {
@@ -37,37 +39,9 @@
             height: 100vh;
             background-color: var(--rail-light);
             background-image:
-                radial-gradient(circle at 14% -8%, #d9e9ff 0%, transparent 30%),
-                radial-gradient(circle at 100% 0%, #cfe4ff 0%, transparent 34%),
-                linear-gradient(145deg, #f4f8ff 0%, #eef4fc 48%, #e9f1fb 100%);
+                linear-gradient(145deg, #f6fbff 0%, #eef5ff 40%, #e7f0ff 100%);
             color: var(--text-main);
             overflow: hidden;
-        }
-
-        body::before {
-            content: "";
-            position: fixed;
-            left: -140px;
-            bottom: -160px;
-            width: 420px;
-            height: 420px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(13, 120, 226, 0.18) 0%, rgba(13, 120, 226, 0) 66%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        body::after {
-            content: "";
-            position: fixed;
-            right: -180px;
-            top: -160px;
-            width: 520px;
-            height: 520px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(10, 61, 129, 0.16) 0%, rgba(10, 61, 129, 0) 70%);
-            pointer-events: none;
-            z-index: 0;
         }
 
         .sidebar {
@@ -80,29 +54,6 @@
             z-index: 10;
             position: relative;
             overflow: hidden;
-        }
-
-        .sidebar::before {
-            content: "";
-            position: absolute;
-            top: -120px;
-            right: -80px;
-            width: 280px;
-            height: 280px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(160, 209, 255, 0.24) 0%, rgba(160, 209, 255, 0) 74%);
-            pointer-events: none;
-        }
-
-        .sidebar::after {
-            content: "";
-            position: absolute;
-            left: 12px;
-            top: 20px;
-            bottom: 20px;
-            width: 2px;
-            border-radius: 2px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%);
         }
 
         .logo-area {
@@ -360,18 +311,19 @@
             margin-bottom: 22px;
             position: relative;
             overflow: hidden;
+            animation: fade-up 0.35s ease;
         }
 
-        .panel-card::after {
-            content: "";
-            position: absolute;
-            right: -100px;
-            top: -100px;
-            width: 180px;
-            height: 180px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(13, 120, 226, 0.08) 0%, rgba(13, 120, 226, 0) 72%);
-            pointer-events: none;
+        @keyframes fade-up {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .card-header {
@@ -706,6 +658,17 @@
             margin: 0;
         }
 
+        .empty-state small {
+            display: block;
+            margin-top: 8px;
+            color: #8a98ad;
+            font-size: 12px;
+        }
+
+        .empty-state .btn {
+            margin-top: 14px;
+        }
+
         .profile-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -790,6 +753,7 @@
             display: flex;
             gap: 8px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .seat-selector label {
@@ -802,7 +766,7 @@
 
         .seat-box {
             display: inline-block;
-            width: 36px;
+            min-width: 36px;
             height: 36px;
             line-height: 36px;
             text-align: center;
@@ -813,6 +777,7 @@
             color: #4b5563;
             transition: all 0.2s;
             background: white;
+            padding: 0 10px;
         }
 
         .seat-selector input:checked + .seat-box {
@@ -826,6 +791,12 @@
             height: 36px;
             background: repeating-linear-gradient(45deg, #f3f4f6, #f3f4f6 2px, #ffffff 2px, #ffffff 4px);
             border-radius: 4px;
+        }
+
+        .seat-note {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #6b7280;
         }
 
         @media (max-width: 980px) {

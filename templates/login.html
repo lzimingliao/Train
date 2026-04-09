@@ -231,6 +231,7 @@
             {% endwith %}
 
             <form action="/login" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div class="custom-tabs">
                     <div class="tab-item active">统一登录</div>
                 </div>

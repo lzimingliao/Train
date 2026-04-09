@@ -1,7 +1,7 @@
 {% if active_tab == 'users' %}
 <div class="panel-card">
     <div class="card-header"><i class="fas fa-users"></i> 用户列表</div>
-    <p class="section-note">可修改姓名和手机号。删除用户前请确认。</p>
+    <p class="section-note">可修改姓名和手机号。管理员账号不可删除；存在有效订单的用户需先退票。</p>
 
     <div class="stat-belt">
         <div class="stat-chip"><div class="k">用户总数</div><div class="v">{{ users|length }} 人</div></div>
@@ -27,10 +27,15 @@
                 <td><span class="badge {% if u.role=='admin' %}badge-red{% else %}badge-blue{% endif %}">{{ u.role }}</span></td>
                 <td>
                     <form id="{{ form_id }}" action="/admin_manage_user" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <input type="hidden" name="id_num" value="{{ u.id_num }}">
                         <div class="table-actions">
                             <button type="submit" name="action" value="edit" class="btn btn-outline btn-sm" title="保存修改"><i class="fas fa-save"></i></button>
+                            {% if u.role == 'admin' %}
+                            <button type="button" class="btn btn-outline btn-sm" style="color:#94a3b8; border-color:#d5dde8; cursor:not-allowed;" title="管理员账号不可删除" disabled><i class="fas fa-lock"></i></button>
+                            {% else %}
                             <button type="submit" name="action" value="delete" class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认删除该用户？')" title="删除用户"><i class="fas fa-trash"></i></button>
+                            {% endif %}
                         </div>
                     </form>
                 </td>
@@ -41,6 +46,7 @@
     {% else %}
     {% set empty_icon = 'fa-users-slash' %}
     {% set empty_message = '暂无用户数据' %}
+    {% set empty_hint = '请先通过注册功能创建普通用户。' %}
     {% include 'dashboard/sections/empty_state.html' %}
     {% endif %}
 </div>

@@ -3,6 +3,7 @@
     <div class="card-header"><i class="fas fa-id-card"></i> 个人信息</div>
     <p class="section-note">可修改用户名、姓名和手机号。身份证号不可修改。</p>
     <form action="/update_profile" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="profile-grid">
             <div class="input-group">
                 <label>登录账号</label>

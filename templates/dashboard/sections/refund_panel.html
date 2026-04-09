@@ -30,10 +30,13 @@
                     {% endif %}
                 </td>
                 <td>
-                    {% if order.status == '已出票' or order.status == '已改签' %}
+                    {% if (order.status == '已出票' or order.status == '已改签') and order.dep_time > now_time %}
                     <form action="/delete_order/{{ order.order_id }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <button class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认退票？')">退票</button>
                     </form>
+                    {% elif order.status == '已出票' or order.status == '已改签' %}
+                    <span style="font-size:13px; color:#9ca3af;">已过发车</span>
                     {% else %}
                     <span style="font-size:13px; color:#9ca3af;">-</span>
                     {% endif %}

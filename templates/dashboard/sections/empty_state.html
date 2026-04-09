@@ -1,4 +1,10 @@
 <div class="panel-card empty-state">
     <i class="fas {{ empty_icon|default('fa-inbox') }}"></i>
     <p>{{ empty_message|default('当前暂无数据') }}</p>
+    {% if empty_hint %}
+    <small>{{ empty_hint }}</small>
+    {% endif %}
+    {% if empty_action_text and empty_action_href %}
+    <a class="btn btn-outline btn-sm" href="{{ empty_action_href }}">{{ empty_action_text }}</a>
+    {% endif %}
 </div>

@@ -1,7 +1,9 @@
 {% if active_tab == 'trains' %}
 <div class="panel-card">
     <div class="card-header"><i class="fas fa-plus-circle"></i> 新增车次</div>
+    <p class="section-note">支持新增、编辑、删除。编辑总座位数时，不能小于已售座位数。</p>
     <form action="/admin_manage_train" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="action" value="add">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
             <div class="input-group"><label>车次编号</label><input type="text" name="train_no" placeholder="例如: G101" required></div>
@@ -18,27 +20,48 @@
 </div>
 
 <div class="panel-card">
-    <div class="card-header"><i class="fas fa-list"></i> 车次列表</div>
+    <div class="card-header"><i class="fas fa-list"></i> 车次列表与编辑</div>
     {% if trains and trains|length > 0 %}
     <div class="table-shell">
         <table>
-            <tr><th>车次编号</th><th>行程区间</th><th>票价与容量</th><th>操作</th></tr>
+            <tr><th>车次编号</th><th>区间</th><th>发车 / 到达</th><th>价格与容量</th><th>编辑</th><th>删除</th></tr>
             {% for t in trains %}
             <tr>
                 <td><strong>{{ t.train_no }}</strong></td>
                 <td>
-                    <span style="font-weight:500;">{{ t.dep_station }} ➔ {{ t.arr_station }}</span><br>
-                    <span style="font-size:12px; color:#6b7280;">{{ t.dep_time.strftime('%Y-%m-%d %H:%M') }} 发车</span>
+                    <div style="display:grid; grid-template-columns: 1fr; gap: 6px; min-width: 160px;">
+                        <input type="text" name="dep_station" form="train-edit-{{ t.train_no }}" value="{{ t.dep_station }}" required>
+                        <input type="text" name="arr_station" form="train-edit-{{ t.train_no }}" value="{{ t.arr_station }}" required>
+                    </div>
                 </td>
                 <td>
-                    <span>¥{{ t.price }}</span> <br>
-                    <span class="badge badge-gray" style="margin-top:4px;">余 {{ t.rem_seats }} / 总 {{ t.total_seats }}</span>
+                    <div style="display:grid; grid-template-columns: 1fr; gap: 6px; min-width: 180px;">
+                        <input type="datetime-local" name="dep_time" form="train-edit-{{ t.train_no }}" value="{{ t.dep_time.strftime('%Y-%m-%dT%H:%M') }}" required>
+                        <input type="datetime-local" name="arr_time" form="train-edit-{{ t.train_no }}" value="{{ t.arr_time.strftime('%Y-%m-%dT%H:%M') }}" required>
+                    </div>
+                </td>
+                <td>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px; min-width: 160px;">
+                        <input type="number" step="0.1" name="price" form="train-edit-{{ t.train_no }}" value="{{ t.price }}" required>
+                        <input type="number" name="carriage_count" form="train-edit-{{ t.train_no }}" value="{{ t.carriage_count }}" min="1" required>
+                        <input type="number" name="total_seats" form="train-edit-{{ t.train_no }}" value="{{ t.total_seats }}" min="0" required style="grid-column: span 2;">
+                    </div>
+                    <div style="font-size:12px; color:#6b7280; margin-top:6px;">余 {{ t.rem_seats }} / 总 {{ t.total_seats }}</div>
+                </td>
+                <td>
+                    <form id="train-edit-{{ t.train_no }}" action="/admin_manage_train" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="action" value="edit">
+                        <input type="hidden" name="train_no" value="{{ t.train_no }}">
+                        <button class="btn btn-outline btn-sm" title="保存车次修改"><i class="fas fa-save"></i> 保存</button>
+                    </form>
                 </td>
                 <td>
                     <form action="/admin_manage_train" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="train_no" value="{{ t.train_no }}">
-                        <button class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认删除该车次？')">删除</button>
+                        <button class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认删除该车次？存在有效订单将禁止删除。')">删除</button>
                     </form>
                 </td>
             </tr>
@@ -48,6 +71,7 @@
     {% else %}
     {% set empty_icon = 'fa-subway' %}
     {% set empty_message = '暂无车次数据' %}
+    {% set empty_hint = '请先新增至少一个车次，再进行查询与订票测试。' %}
     {% include 'dashboard/sections/empty_state.html' %}
     {% endif %}
 </div>

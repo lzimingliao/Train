@@ -296,6 +296,7 @@
             {% endwith %}
 
             <form action="/register" method="POST" id="registerForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div class="form-floating">
                     <input type="text" class="form-control" id="username" name="username" placeholder="登录用户名" required autocomplete="username">
                     <label for="username">登录用户名<span class="required">*</span></label>
