@@ -1,8 +1,9 @@
 {% if active_tab == 'profile' %}
-<div class="panel-card" style="max-width: 800px;">
+<div class="panel-card">
     <div class="card-header"><i class="fas fa-id-card"></i> 账号基本资料</div>
+    <p class="section-note">当前页面用于维护个人账号信息。证件号为系统主键，不支持修改。</p>
     <form action="/update_profile" method="POST">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+        <div class="profile-grid">
             <div class="input-group">
                 <label>登录账号</label>
                 <input type="text" name="username" value="{{ user.username }}" required>
@@ -20,7 +21,10 @@
                 <input type="text" value="{{ user.id_num }}" readonly disabled>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> 保存修改</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> 保存修改</button>
+            <a href="/" class="btn btn-outline"><i class="fas fa-arrow-left"></i> 返回首页</a>
+        </div>
     </form>
 </div>
 {% endif %}

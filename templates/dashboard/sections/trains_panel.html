@@ -19,28 +19,36 @@
 
 <div class="panel-card">
     <div class="card-header"><i class="fas fa-list"></i> 已录入车次管理</div>
-    <table>
-        <tr><th>车次编号</th><th>行程区间</th><th>票价与容量</th><th>操作</th></tr>
-        {% for t in trains %}
-        <tr>
-            <td><strong>{{ t.train_no }}</strong></td>
-            <td>
-                <span style="font-weight:500;">{{ t.dep_station }} ➔ {{ t.arr_station }}</span><br>
-                <span style="font-size:12px; color:#6b7280;">{{ t.dep_time.strftime('%Y-%m-%d %H:%M') }} 发车</span>
-            </td>
-            <td>
-                <span>¥{{ t.price }}</span> <br>
-                <span class="badge badge-gray" style="margin-top:4px;">余 {{ t.rem_seats }} / 总 {{ t.total_seats }}</span>
-            </td>
-            <td>
-                <form action="/admin_manage_train" method="POST">
-                    <input type="hidden" name="action" value="delete">
-                    <input type="hidden" name="train_no" value="{{ t.train_no }}">
-                    <button class="btn btn-outline" style="color:var(--danger-color); border-color:#fca5a5; padding: 6px 10px;" onclick="return confirm('警告：确认要删除此车次记录吗？')">删除车次</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+    {% if trains and trains|length > 0 %}
+    <div class="table-shell">
+        <table>
+            <tr><th>车次编号</th><th>行程区间</th><th>票价与容量</th><th>操作</th></tr>
+            {% for t in trains %}
+            <tr>
+                <td><strong>{{ t.train_no }}</strong></td>
+                <td>
+                    <span style="font-weight:500;">{{ t.dep_station }} ➔ {{ t.arr_station }}</span><br>
+                    <span style="font-size:12px; color:#6b7280;">{{ t.dep_time.strftime('%Y-%m-%d %H:%M') }} 发车</span>
+                </td>
+                <td>
+                    <span>¥{{ t.price }}</span> <br>
+                    <span class="badge badge-gray" style="margin-top:4px;">余 {{ t.rem_seats }} / 总 {{ t.total_seats }}</span>
+                </td>
+                <td>
+                    <form action="/admin_manage_train" method="POST">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="train_no" value="{{ t.train_no }}">
+                        <button class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('警告：确认要删除此车次记录吗？')">删除车次</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% else %}
+    {% set empty_icon = 'fa-subway' %}
+    {% set empty_message = '当前暂无已录入车次' %}
+    {% include 'dashboard/sections/empty_state.html' %}
+    {% endif %}
 </div>
 {% endif %}

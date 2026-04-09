@@ -268,7 +268,7 @@
         .top-header {
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(10px);
-            padding: 20px 36px;
+            padding: 18px 36px;
             border-bottom: 1px solid rgba(187, 205, 229, 0.7);
             position: sticky;
             top: 0;
@@ -280,13 +280,13 @@
         }
 
         .header-title {
-            font-size: 21px;
+            font-size: 20px;
             font-weight: 700;
             color: var(--text-main);
             display: flex;
             align-items: center;
             gap: 10px;
-            letter-spacing: 0.2px;
+            letter-spacing: 0.1px;
         }
 
         .header-title i {
@@ -354,7 +354,7 @@
         .panel-card {
             background: linear-gradient(180deg, #ffffff 0%, var(--panel-secondary) 100%);
             border-radius: 18px;
-            padding: 24px;
+            padding: 22px;
             box-shadow: var(--shadow-soft);
             border: 1px solid var(--border-color);
             margin-bottom: 22px;
@@ -378,7 +378,7 @@
             font-size: 16px;
             font-weight: 700;
             color: var(--text-main);
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             padding-bottom: 12px;
             border-bottom: 1px solid #dbe7f7;
             display: flex;
@@ -599,6 +599,21 @@
             transform: translateY(-1px);
         }
 
+        .btn-sm {
+            padding: 7px 11px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            min-height: 32px;
+        }
+
+        .table-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
         .split-layout {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -675,6 +690,10 @@
             color: #a5bddb;
         }
 
+        .empty-state p {
+            margin: 0;
+        }
+
         .profile-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -686,6 +705,7 @@
             font-size: 12px;
             color: var(--text-muted);
             margin-bottom: 14px;
+            line-height: 1.55;
             position: relative;
             z-index: 1;
         }
@@ -703,14 +723,21 @@
             font-weight: 700;
             border-bottom: 1px solid var(--border-color);
             background: #f4f9ff;
+            white-space: nowrap;
+            line-height: 1.25;
         }
 
         td {
-            padding: 16px;
+            padding: 14px 16px;
             border-bottom: 1px solid #edf2fb;
             vertical-align: middle;
             font-size: 14px;
             color: var(--text-main);
+            line-height: 1.45;
+        }
+
+        .table-shell table tr:nth-child(even) td {
+            background: rgba(244, 249, 255, 0.62);
         }
 
         tr:hover td {
@@ -886,7 +913,7 @@
         </h2>
         <div class="header-meta">
             <span class="meta-pill"><i class="fas fa-user-shield"></i> {{ '管理员视图' if session.get('role') == 'admin' else '用户视图' }}</span>
-            <span class="meta-pill"><i class="fas fa-calendar-alt"></i> {{ 'now'|safe }}</span>
+            <span class="meta-pill"><i class="fas fa-calendar-alt"></i> <span id="header-date-text">运营中</span></span>
         </div>
     </header>
 
@@ -895,6 +922,18 @@
         {% block dashboard_content %}{% endblock %}
     </main>
 </div>
+
+<script>
+    (function () {
+        var target = document.getElementById('header-date-text');
+        if (!target) return;
+        var now = new Date();
+        var y = now.getFullYear();
+        var m = String(now.getMonth() + 1).padStart(2, '0');
+        var d = String(now.getDate()).padStart(2, '0');
+        target.textContent = y + '-' + m + '-' + d;
+    })();
+</script>
 
 </body>
 

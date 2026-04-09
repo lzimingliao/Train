@@ -1,43 +1,51 @@
 {% if active_tab == 'refund' %}
 <div class="panel-card">
     <div class="card-header"><i class="fas fa-history"></i> 历史交易及乘车记录</div>
-    <table>
-        <tr><th>订单编号 / 创建时间</th><th>行程信息</th><th>支付明细</th><th>当前状态</th><th>管理操作</th></tr>
-        {% for order in orders %}
-        <tr>
-            <td>
-                <div style="font-family:monospace; color:#4b5563;">{{ order.order_id }}</div>
-                <div style="font-size:12px; color:#9ca3af; margin-top:4px;">{{ order.booking_time.strftime('%Y-%m-%d %H:%M') }}</div>
-            </td>
-            <td>
-                <strong style="color:var(--text-main);">{{ order.train_no }}</strong><br>
-                <span style="font-size:13px; color:#4b5563;">{{ order.train.dep_station }} ➔ {{ order.train.arr_station }}</span><br>
-                <small style="color:#6b7280;">{{ order.train.dep_time.strftime('%m-%d %H:%M') }}</small>
-            </td>
-            <td>
-                <div style="font-weight:600;">¥{{ order.price }}</div>
-                <div style="font-size:13px; color:#6b7280; margin-top:2px;">座位: {{ order.seat_no }}</div>
-            </td>
-            <td>
-                {% if order.status == '已退票' %}
-                <span class="badge badge-gray">{{ order.status }}</span>
-                {% elif order.status == '已改签' %}
-                <span class="badge badge-blue">{{ order.status }}</span>
-                {% else %}
-                <span class="badge badge-green">{{ order.status }}</span>
-                {% endif %}
-            </td>
-            <td>
-                {% if order.status == '已出票' or order.status == '已改签' %}
-                <form action="/delete_order/{{ order.order_id }}" method="POST">
-                    <button class="btn btn-outline" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认提交退票申请？对应的资金将原路返回。')">申请退票</button>
-                </form>
-                {% else %}
-                <span style="font-size:13px; color:#9ca3af;">无可用操作</span>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+    {% if orders and orders|length > 0 %}
+    <div class="table-shell">
+        <table>
+            <tr><th>订单编号 / 创建时间</th><th>行程信息</th><th>支付明细</th><th>当前状态</th><th>管理操作</th></tr>
+            {% for order in orders %}
+            <tr>
+                <td>
+                    <div style="font-family:monospace; color:#4b5563;">{{ order.order_id }}</div>
+                    <div style="font-size:12px; color:#9ca3af; margin-top:4px;">{{ order.booking_time.strftime('%Y-%m-%d %H:%M') }}</div>
+                </td>
+                <td>
+                    <strong style="color:var(--text-main);">{{ order.train_no }}</strong><br>
+                    <span style="font-size:13px; color:#4b5563;">{{ order.train.dep_station }} ➔ {{ order.train.arr_station }}</span><br>
+                    <small style="color:#6b7280;">{{ order.train.dep_time.strftime('%m-%d %H:%M') }}</small>
+                </td>
+                <td>
+                    <div style="font-weight:600;">¥{{ order.price }}</div>
+                    <div style="font-size:13px; color:#6b7280; margin-top:2px;">座位: {{ order.seat_no }}</div>
+                </td>
+                <td>
+                    {% if order.status == '已退票' %}
+                    <span class="badge badge-gray">{{ order.status }}</span>
+                    {% elif order.status == '已改签' %}
+                    <span class="badge badge-blue">{{ order.status }}</span>
+                    {% else %}
+                    <span class="badge badge-green">{{ order.status }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if order.status == '已出票' or order.status == '已改签' %}
+                    <form action="/delete_order/{{ order.order_id }}" method="POST">
+                        <button class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认提交退票申请？对应的资金将原路返回。')">申请退票</button>
+                    </form>
+                    {% else %}
+                    <span style="font-size:13px; color:#9ca3af;">无可用操作</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% else %}
+    {% set empty_icon = 'fa-receipt' %}
+    {% set empty_message = '暂无历史订单记录' %}
+    {% include 'dashboard/sections/empty_state.html' %}
+    {% endif %}
 </div>
 {% endif %}

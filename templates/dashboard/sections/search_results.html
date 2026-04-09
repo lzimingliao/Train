@@ -2,67 +2,74 @@
     {% if search_results|length > 0 %}
     <div class="panel-card">
         <div class="card-header"><i class="fas fa-table"></i> 查询结果及余票信息</div>
-        <table>
-            <tr><th>车次</th><th>出发 / 到达站</th><th>出发 / 到达时间</th><th>票价</th><th>余票状态</th><th>操作与选座</th></tr>
-            {% for t in search_results %}
-            <tr>
-                <td><strong style="font-size:18px;">{{ t.train_no }}</strong></td>
-                <td>
-                    <div style="font-weight: 500;">{{ t.dep_station }}</div>
-                    <div style="font-weight: 500; color: #6b7280; margin-top: 4px;">{{ t.arr_station }}</div>
-                </td>
-                <td>
-                    <div style="font-weight: 600;">{{ t.dep_time.strftime('%H:%M') }}</div>
-                    <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">{{ t.arr_time.strftime('%H:%M') }}</div>
-                </td>
-                <td style="color: var(--danger-color); font-weight: 600;">¥{{ t.price }}</td>
-                <td>
-                    <span class="badge {% if t.rem_seats>0 %}badge-green{% else %}badge-red{% endif %}">余票: {{ t.rem_seats }}</span>
-                </td>
-                <td>
-                    {% if t.rem_seats > 0 %}
-                        {% if active_tab == 'book' %}
-                            <form action="/book_ticket" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
-                                <input type="hidden" name="train_no" value="{{ t.train_no }}">
-                                <div class="seat-selector">
-                                    <label title="靠窗"><input type="radio" name="seat_type" value="A"><span class="seat-box">A</span></label>
-                                    <label title="中间"><input type="radio" name="seat_type" value="B"><span class="seat-box">B</span></label>
-                                    <label title="靠道"><input type="radio" name="seat_type" value="C"><span class="seat-box">C</span></label>
-                                    <div class="seat-aisle"></div>
-                                    <label title="靠道"><input type="radio" name="seat_type" value="D"><span class="seat-box">D</span></label>
-                                    <label title="靠窗"><input type="radio" name="seat_type" value="F"><span class="seat-box">F</span></label>
-                                </div>
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> 确认订票</button>
-                            </form>
-                        {% elif active_tab == 'reschedule' and reschedule_order_id %}
-                            <form action="/do_reschedule" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
-                                <input type="hidden" name="order_id" value="{{ reschedule_order_id }}">
-                                <input type="hidden" name="new_train_no" value="{{ t.train_no }}">
-                                <div class="seat-selector">
-                                    <label><input type="radio" name="seat_type" value="A"><span class="seat-box">A</span></label>
-                                    <label><input type="radio" name="seat_type" value="B"><span class="seat-box">B</span></label>
-                                    <label><input type="radio" name="seat_type" value="C"><span class="seat-box">C</span></label>
-                                    <div class="seat-aisle"></div>
-                                    <label><input type="radio" name="seat_type" value="D"><span class="seat-box">D</span></label>
-                                    <label><input type="radio" name="seat_type" value="F"><span class="seat-box">F</span></label>
-                                </div>
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> 确认改签</button>
-                            </form>
-                        {% elif active_tab == 'query' %}
-                            <span class="badge badge-gray">管理员预览模式</span>
+        <div class="stat-belt">
+            <div class="stat-chip"><div class="k">结果总数</div><div class="v">{{ search_results|length }} 条</div></div>
+            <div class="stat-chip"><div class="k">可订票车次</div><div class="v">{{ search_results|selectattr('rem_seats', 'gt', 0)|list|length }} 条</div></div>
+            <div class="stat-chip"><div class="k">展示模式</div><div class="v">{{ '管理员预览' if active_tab == 'query' else '用户可操作' }}</div></div>
+        </div>
+
+        <div class="table-shell">
+            <table>
+                <tr><th>车次</th><th>出发 / 到达站</th><th>出发 / 到达时间</th><th>票价</th><th>余票状态</th><th>操作与选座</th></tr>
+                {% for t in search_results %}
+                <tr>
+                    <td><strong style="font-size:18px;">{{ t.train_no }}</strong></td>
+                    <td>
+                        <div style="font-weight: 500;">{{ t.dep_station }}</div>
+                        <div style="font-weight: 500; color: #6b7280; margin-top: 4px;">{{ t.arr_station }}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600;">{{ t.dep_time.strftime('%H:%M') }}</div>
+                        <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">{{ t.arr_time.strftime('%H:%M') }}</div>
+                    </td>
+                    <td style="color: var(--danger-color); font-weight: 600;">¥{{ t.price }}</td>
+                    <td>
+                        <span class="badge {% if t.rem_seats>0 %}badge-green{% else %}badge-red{% endif %}">余票: {{ t.rem_seats }}</span>
+                    </td>
+                    <td>
+                        {% if t.rem_seats > 0 %}
+                            {% if active_tab == 'book' %}
+                                <form action="/book_ticket" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
+                                    <input type="hidden" name="train_no" value="{{ t.train_no }}">
+                                    <div class="seat-selector">
+                                        <label title="靠窗"><input type="radio" name="seat_type" value="A"><span class="seat-box">A</span></label>
+                                        <label title="中间"><input type="radio" name="seat_type" value="B"><span class="seat-box">B</span></label>
+                                        <label title="靠道"><input type="radio" name="seat_type" value="C"><span class="seat-box">C</span></label>
+                                        <div class="seat-aisle"></div>
+                                        <label title="靠道"><input type="radio" name="seat_type" value="D"><span class="seat-box">D</span></label>
+                                        <label title="靠窗"><input type="radio" name="seat_type" value="F"><span class="seat-box">F</span></label>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> 确认订票</button>
+                                </form>
+                            {% elif active_tab == 'reschedule' and reschedule_order_id %}
+                                <form action="/do_reschedule" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
+                                    <input type="hidden" name="order_id" value="{{ reschedule_order_id }}">
+                                    <input type="hidden" name="new_train_no" value="{{ t.train_no }}">
+                                    <div class="seat-selector">
+                                        <label><input type="radio" name="seat_type" value="A"><span class="seat-box">A</span></label>
+                                        <label><input type="radio" name="seat_type" value="B"><span class="seat-box">B</span></label>
+                                        <label><input type="radio" name="seat_type" value="C"><span class="seat-box">C</span></label>
+                                        <div class="seat-aisle"></div>
+                                        <label><input type="radio" name="seat_type" value="D"><span class="seat-box">D</span></label>
+                                        <label><input type="radio" name="seat_type" value="F"><span class="seat-box">F</span></label>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> 确认改签</button>
+                                </form>
+                            {% elif active_tab == 'query' %}
+                                <span class="badge badge-gray">管理员预览模式</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge badge-gray">无可用座位</span>
                         {% endif %}
-                    {% else %}
-                        <span class="badge badge-gray">无可用座位</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
     </div>
     {% else %}
-    <div class="panel-card" style="text-align: center; padding: 60px; color: #6b7280;">
-        <i class="fas fa-search" style="font-size: 32px; margin-bottom: 16px; color: #d1d5db;"></i>
-        <p>未查询到符合条件的车次记录</p>
-    </div>
+    {% set empty_icon = 'fa-search' %}
+    {% set empty_message = '未查询到符合条件的车次记录' %}
+    {% include 'dashboard/sections/empty_state.html' %}
     {% endif %}
 {% endif %}
