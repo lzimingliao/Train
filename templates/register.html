@@ -1,256 +1,419 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>用户注册 - 极速城际票务管理系统</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>注册 - 火车票管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary-color: #1a56db;
-            --primary-hover: #1e429f;
-            --bg-color: #f3f4f6;
-            --text-main: #111827;
-            --text-muted: #6b7280;
-            --border-color: #e5e7eb;
-            --error-color: #ef4444;
+            --rail-blue: #0A3D81;
+            --rail-light: #F4F7FC;
+            --rail-accent: #0066CC;
+            --text-main: #2C3E50;
+            --error-color: #e53e3e;
+            --success-color: #38a169;
+            --warning-color: #d69e2e;
         }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
         body {
-            min-height: 100vh;
+            background-color: var(--rail-light);
+            height: 100vh;
             display: flex;
-            justify-content: center;
             align-items: center;
-            background-color: var(--bg-color);
-            background-image: radial-gradient(#d1d5db 1px, transparent 1px);
-            background-size: 24px 24px;
-            padding: 20px;
-        }
-
-        .auth-container {
-            width: 100%;
-            max-width: 520px;
-            background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            margin: 0;
             overflow: hidden;
         }
 
-        .auth-header {
-            background: linear-gradient(to right, #1e3a8a, #1a56db);
-            padding: 30px 30px;
-            text-align: center;
-            color: white;
-        }
-
-        .auth-header .brand-icon {
-            font-size: 32px;
-            margin-bottom: 12px;
-            color: #93c5fd;
-        }
-
-        .auth-header h1 {
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            margin-bottom: 6px;
-        }
-
-        .auth-header p {
-            font-size: 13px;
-            color: #bfdbfe;
-            opacity: 0.9;
-        }
-
-        .auth-body {
-            padding: 30px;
-        }
-
-        .alert-box {
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-            font-size: 13px;
-            font-weight: 500;
+        .login-container {
+            width: 100%;
+            max-width: 900px;
+            height: 560px;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(10, 61, 129, 0.08);
             display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .alert-box.success { background: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
-        .alert-box.error { background: #fef2f2; color: #991b1b; border-left: 4px solid var(--error-color); }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 8px;
+            overflow: hidden;
         }
 
-        .form-control {
+        .brand-section {
+            width: 42%;
+            background: linear-gradient(135deg, var(--rail-blue) 0%, var(--rail-accent) 100%);
+            color: white;
+            padding: 45px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .brand-title h2 {
+            font-weight: 700;
+            font-size: 1.75rem;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .brand-title p {
+            font-size: 0.9rem;
+            opacity: 0.85;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .train-icon-wrapper {
+            opacity: 0.9;
+            transform: scale(1.2);
+            transform-origin: left bottom;
+        }
+
+        .form-section {
+            width: 58%;
+            padding: 44px 52px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .register-title {
+            margin-bottom: 22px;
+            border-bottom: 2px solid #edf2f7;
+            padding-bottom: 10px;
+        }
+
+        .register-title h3 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: 1px;
+        }
+
+        .register-title p {
+            margin: 6px 0 0;
+            color: #718096;
+            font-size: 0.82rem;
+        }
+
+        .register-alert {
+            margin-bottom: 14px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            padding: 10px 12px;
+        }
+
+        .form-floating {
+            position: relative;
             margin-bottom: 16px;
         }
-        .form-control.full-width {
-            grid-column: 1 / -1;
+
+        .form-floating>.form-control {
+            border: none;
+            border-bottom: 1px solid #cbd5e0;
+            border-radius: 0;
+            padding-left: 0;
+            background-color: transparent;
+            box-shadow: none;
+            font-weight: 500;
         }
 
-        .form-control label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-main);
-            margin-bottom: 8px;
+        .form-floating>.form-control:focus {
+            border-bottom-color: var(--rail-accent);
         }
-        .form-control label .required {
+
+        .form-floating>label {
+            padding-left: 0;
+            color: #718096;
+        }
+
+        .form-floating>label .required {
             color: var(--error-color);
             margin-left: 4px;
         }
 
-        .input-group {
-            position: relative;
+        .form-row {
+            display: flex;
+            gap: 20px;
         }
-        .input-group i {
+
+        .form-row .form-floating {
+            flex: 1;
+        }
+
+        .password-toggle {
             position: absolute;
-            left: 14px;
+            right: 0;
             top: 50%;
             transform: translateY(-50%);
-            color: #9ca3af;
-        }
-        .input-group input {
-            width: 100%;
-            padding: 12px 14px 12px 40px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 14px;
-            color: var(--text-main);
-            transition: all 0.2s ease;
-            outline: none;
-        }
-        .input-group input:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
-        }
-        .input-group input::placeholder {
-            color: #9ca3af;
-            font-size: 13px;
-        }
-
-        .submit-btn {
-            width: 100%;
-            padding: 14px;
-            background-color: var(--primary-color);
-            color: white;
+            background: none;
             border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
+            color: #a0aec0;
             cursor: pointer;
-            transition: background-color 0.2s ease;
-            margin-top: 16px;
+            padding: 10px 0;
+            z-index: 10;
+            transition: color 0.2s;
         }
-        .submit-btn:hover { background-color: var(--primary-hover); }
 
-        .form-footer {
-            text-align: center;
-            margin-top: 24px;
-            font-size: 13px;
-            color: var(--text-muted);
+        .password-toggle:hover {
+            color: var(--rail-accent);
         }
-        .form-footer a {
-            color: var(--primary-color);
+
+        .password-strength {
+            height: 4px;
+            background-color: #edf2f7;
+            border-radius: 2px;
+            margin-top: -8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .strength-bar {
+            height: 100%;
+            width: 0;
+            transition: all 0.3s ease;
+        }
+
+        .strength-text {
+            font-size: 0.78rem;
+            margin-top: 4px;
+            margin-bottom: 14px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .btn-register {
+            background-color: var(--rail-blue);
+            color: white;
+            border-radius: 4px;
+            padding: 12px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            margin-top: 10px;
+            border: none;
+        }
+
+        .btn-register:hover:not(:disabled) {
+            background-color: var(--rail-accent);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.2);
+        }
+
+        .btn-register:disabled {
+            background-color: #cbd5e0;
+            cursor: not-allowed;
+        }
+
+        .login-hint {
+            margin-top: 18px;
+            font-size: 0.85rem;
+            color: #718096;
+            text-align: center;
+        }
+
+        .login-hint a {
+            color: var(--rail-accent);
             font-weight: 600;
             text-decoration: none;
         }
-        .form-footer a:hover { text-decoration: underline; }
+
+        @media (max-width: 768px) {
+            body {
+                overflow: auto;
+                padding: 20px 0;
+            }
+
+            .login-container {
+                flex-direction: column;
+                height: auto;
+                max-width: 400px;
+                margin: 0 auto;
+            }
+
+            .brand-section {
+                width: 100%;
+                padding: 30px;
+                height: 180px;
+            }
+
+            .form-section {
+                width: 100%;
+                padding: 34px 28px;
+            }
+
+            .train-icon-wrapper {
+                display: none;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+        }
     </style>
 </head>
+
 <body>
 
-    <div class="auth-container">
-        <!-- 头部品牌区域 -->
-        <div class="auth-header">
-            <i class="fas fa-id-card brand-icon"></i>
-            <h1>实名注册</h1>
-            <p>Real-name Registration System</p>
+    <div class="login-container">
+        <div class="brand-section">
+            <div class="brand-title">
+                <h2>火车票管理系统</h2>
+                <p>数据结构与算法分析综合实践</p>
+            </div>
+
+            <div class="train-icon-wrapper">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M7 15h10M7 11h10M6 19h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2z"></path>
+                    <path d="m9 19-2 3M15 19l2 3M12 4v0"></path>
+                </svg>
+            </div>
         </div>
 
-        <!-- 表单区域 -->
-        <div class="auth-body">
+        <div class="form-section">
+            <div class="register-title">
+                <h3>乘客实名注册</h3>
+                <p>请填写真实信息，提交后即可用用户名登录系统</p>
+            </div>
 
-            <!-- Flask 消息闪现 -->
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                        <div class="alert-box {{ category }}">
-                            <i class="fas {% if category == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
-                            {{ message }}
-                        </div>
+                        {% if category == 'error' %}
+                            <div class="alert alert-danger register-alert" role="alert">{{ message }}</div>
+                        {% elif category == 'success' %}
+                            <div class="alert alert-success register-alert" role="alert">{{ message }}</div>
+                        {% else %}
+                            <div class="alert alert-secondary register-alert" role="alert">{{ message }}</div>
+                        {% endif %}
                     {% endfor %}
                 {% endif %}
             {% endwith %}
 
-            <form action="/register" method="POST">
-                <div class="form-grid">
-
-                    <!-- 账号 -->
-                    <div class="form-control full-width">
-                        <label for="username">登录账号<span class="required">*</span></label>
-                        <div class="input-group">
-                            <i class="far fa-user"></i>
-                            <input type="text" id="username" name="username" placeholder="设置您的系统唯一登录名" required>
-                        </div>
-                    </div>
-
-                    <!-- 密码 -->
-                    <div class="form-control full-width">
-                        <label for="password">登录密码<span class="required">*</span></label>
-                        <div class="input-group">
-                            <i class="fas fa-lock"></i>
-                            <input type="password" id="password" name="password" placeholder="≥6位，须含字母/数字/符号中的2种" required>
-                        </div>
-                    </div>
-
-                    <!-- 姓名 -->
-                    <div class="form-control">
-                        <label for="name">真实姓名<span class="required">*</span></label>
-                        <div class="input-group">
-                            <i class="far fa-id-badge"></i>
-                            <input type="text" id="name" name="name" placeholder="乘车人姓名" required>
-                        </div>
-                    </div>
-
-                    <!-- 手机号 -->
-                    <div class="form-control">
-                        <label for="phone">手机号码</label>
-                        <div class="input-group">
-                            <i class="fas fa-mobile-alt"></i>
-                            <input type="text" id="phone" name="phone" placeholder="11位手机号 (选填)">
-                        </div>
-                    </div>
-
-                    <!-- 身份证 -->
-                    <div class="form-control full-width">
-                        <label for="id_num">中国大陆居民身份证<span class="required">*</span></label>
-                        <div class="input-group">
-                            <i class="far fa-address-card"></i>
-                            <input type="text" id="id_num" name="id_num" placeholder="18位有效身份证号码" required>
-                        </div>
-                    </div>
-
+            <form action="/register" method="POST" id="registerForm">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="username" name="username" placeholder="登录用户名" required autocomplete="username">
+                    <label for="username">登录用户名<span class="required">*</span></label>
                 </div>
 
-                <button type="submit" class="submit-btn">
-                    提交注册信息
-                </button>
+                <div class="form-floating mb-0">
+                    <input type="password" class="form-control" id="password" name="password" placeholder="设置密码" required autocomplete="new-password" oninput="checkPasswordStrength()">
+                    <label for="password">设置密码<span class="required">*</span></label>
+                    <button type="button" class="password-toggle" onclick="togglePasswordVisibility()">
+                        <i class="fas fa-eye-slash" id="password-icon"></i>
+                    </button>
+                </div>
+
+                <div class="password-strength" id="strength-container">
+                    <div class="strength-bar" id="strength-bar"></div>
+                </div>
+                <div class="strength-text" id="strength-text"></div>
+
+                <div class="form-row mt-1">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="name" name="name" placeholder="真实姓名" required autocomplete="name">
+                        <label for="name">真实姓名<span class="required">*</span></label>
+                    </div>
+
+                    <div class="form-floating">
+                        <input type="tel" class="form-control" id="phone" name="phone" placeholder="手机号码" pattern="^1[3-9]\d{9}$" maxlength="11" title="请输入11位有效手机号码" autocomplete="tel-national">
+                        <label for="phone">手机号码（选填）</label>
+                    </div>
+                </div>
+
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="id_num" name="id_num" placeholder="居民身份证号" required pattern="^\d{17}[\dXx]$" maxlength="18" title="请输入18位有效身份证号码，最后一位可为X" autocomplete="off">
+                    <label for="id_num">中国大陆居民身份证<span class="required">*</span></label>
+                </div>
+
+                <button type="submit" class="btn btn-register w-100" id="submitBtn" disabled>提交注册信息</button>
             </form>
 
-            <div class="form-footer">
-                已拥有系统账号？ <a href="/login">返回登录页面</a>
+            <div class="login-hint">
+                已拥有系统账号？ <a href="/login">立即登录</a>
             </div>
         </div>
     </div>
 
+    <script>
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const icon = document.getElementById('password-icon');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            }
+        }
+
+        function checkPasswordStrength() {
+            const password = document.getElementById('password').value;
+            const strengthContainer = document.getElementById('strength-container');
+            const strengthBar = document.getElementById('strength-bar');
+            const strengthText = document.getElementById('strength-text');
+            const submitBtn = document.getElementById('submitBtn');
+
+            const hasLetter = /[a-zA-Z]/.test(password);
+            const hasDigit = /\d/.test(password);
+            const hasSymbol = /[^a-zA-Z0-9]/.test(password);
+            const typesCount = [hasLetter, hasDigit, hasSymbol].filter(Boolean).length;
+            const weakPasswords = ['123456', '12345678', 'password', '111111'];
+            const isWeakCommon = weakPasswords.includes(password.toLowerCase());
+            const isValid = password.length >= 6 && typesCount >= 2 && !isWeakCommon;
+
+            if (password.length === 0) {
+                strengthContainer.style.display = 'none';
+                strengthText.style.display = 'none';
+                submitBtn.disabled = true;
+                return;
+            }
+
+            strengthContainer.style.display = 'block';
+            strengthText.style.display = 'block';
+
+            if (!isValid) {
+                strengthBar.style.width = '34%';
+                strengthBar.style.backgroundColor = 'var(--error-color)';
+                if (password.length < 6) {
+                    strengthText.innerText = '弱：密码长度必须至少为6位';
+                } else if (isWeakCommon) {
+                    strengthText.innerText = '弱：密码过于常见，请更换';
+                } else {
+                    strengthText.innerText = '弱：请至少包含字母、数字、符号中的两类';
+                }
+                strengthText.style.color = 'var(--error-color)';
+                submitBtn.disabled = true;
+                return;
+            }
+
+            if (typesCount === 2) {
+                strengthBar.style.width = '68%';
+                strengthBar.style.backgroundColor = 'var(--warning-color)';
+                strengthText.innerText = '中：密码合格，可提交注册';
+                strengthText.style.color = 'var(--warning-color)';
+            } else {
+                strengthBar.style.width = '100%';
+                strengthBar.style.backgroundColor = 'var(--success-color)';
+                strengthText.innerText = '强：密码强度优秀';
+                strengthText.style.color = 'var(--success-color)';
+            }
+
+            submitBtn.disabled = false;
+        }
+
+        window.addEventListener('DOMContentLoaded', checkPasswordStrength);
+    </script>
+
 </body>
+
 </html>
