@@ -1,25 +1,25 @@
 {% if active_tab == 'book' or active_tab == 'query' %}
 <div class="panel-card">
-    <div class="card-header"><i class="fas fa-filter"></i> 车票查询条件</div>
-    <p class="section-note">支持按区间直达检索和按车站检索两种方式，查询结果将自动按余票和时间排序展示。</p>
+    <div class="card-header"><i class="fas fa-filter"></i> 车票查询</div>
+    <p class="section-note">支持区间查询和车站查询。结果按任务书要求排序。</p>
 
     <div class="split-layout">
         <div class="sub-card">
-            <h4><i class="fas fa-route"></i> 区间直达查询</h4>
+            <h4><i class="fas fa-route"></i> 区间查询</h4>
             <form action="/do_query" method="GET">
                 <input type="hidden" name="search_type" value="interval">
                 <input type="hidden" name="source_tab" value="{{ active_tab }}">
                 <div class="form-row">
                     <div class="input-group"><label>乘车日期</label><input type="date" name="date" required></div>
-                    <div class="input-group"><label>出发地 (支持模糊)</label><input type="text" name="start_station" required placeholder="例如: 北京"></div>
+                    <div class="input-group"><label>出发站</label><input type="text" name="start_station" required placeholder="例如: 北京"></div>
                     <div class="input-group"><label>目的地</label><input type="text" name="end_station" required placeholder="例如: 上海"></div>
                 </div>
-                <button class="btn btn-primary" style="width: 100%;"><i class="fas fa-search"></i> 查询区间车次</button>
+                <button class="btn btn-primary" style="width: 100%;"><i class="fas fa-search"></i> 查询</button>
             </form>
         </div>
 
         <div class="sub-card">
-            <h4><i class="fas fa-map-marker-alt"></i> 车站班次查询</h4>
+            <h4><i class="fas fa-map-marker-alt"></i> 车站查询</h4>
             <form action="/do_query" method="GET">
                 <input type="hidden" name="search_type" value="station">
                 <input type="hidden" name="source_tab" value="{{ active_tab }}">
@@ -27,7 +27,7 @@
                     <div class="input-group"><label>乘车日期</label><input type="date" name="date" required></div>
                     <div class="input-group"><label>途径车站</label><input type="text" name="station" placeholder="例如: 南京南" required></div>
                 </div>
-                <button class="btn btn-outline" style="width: 100%;"><i class="fas fa-list"></i> 查询车站所有班次</button>
+                <button class="btn btn-outline" style="width: 100%;"><i class="fas fa-list"></i> 查询</button>
             </form>
         </div>
     </div>

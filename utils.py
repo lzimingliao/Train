@@ -56,7 +56,7 @@ def seat_to_index(seat_str):
         col_char = seat_str[-1].upper()
         col_map = {"A": 0, "B": 1, "C": 2, "D": 3, "F": 4}
         return (carriage - 1) * 20 + (row - 1) * 5 + col_map[col_char]
-    except:
+    except (ValueError, KeyError, TypeError):
         return -1
 
 
@@ -129,9 +129,22 @@ def validate_phone(phone):
     return not phone or (len(phone) == 11 and phone.isdigit())
 
 
+def validate_station_name(name):
+    if not name:
+        return False
+    station = name.strip()
+    if not station or len(station) > 30:
+        return False
+    return bool(re.match(r"^[\u4e00-\u9fffA-Za-z0-9\-\s]+$", station))
+
+
+def validate_date_string(date_str):
+    return bool(re.match(r"^\d{4}-\d{2}-\d{2}$", date_str or ""))
+
+
 def validate_password(password):
     if len(password) < 6:
-        return False, "密码长度必须至少为6位"
+        return False, "密码长度至少6位"
 
     has_letter = any(c.isalpha() for c in password)
     has_digit = any(c.isdigit() for c in password)
@@ -139,13 +152,13 @@ def validate_password(password):
 
     types_count = sum([has_letter, has_digit, has_symbol])
     if types_count < 2:
-        return False, "密码过于简单：必须包含字母、数字、符号中的至少两种"
+        return False, "密码需包含字母、数字、符号中的至少两种"
 
     weak_passwords = ["123456", "12345678", "password", "111111"]
-    if password in weak_passwords:
-        return False, "密码属常见弱密码，请强制修改为更复杂的组合"
+    if password.lower() in weak_passwords:
+        return False, "密码过于常见，请更换"
 
-    return True, "校验通过"
+    return True, "通过"
 
 
 class PermissionNode:

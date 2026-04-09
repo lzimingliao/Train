@@ -1,45 +1,46 @@
 {% if active_tab == 'users' %}
 <div class="panel-card">
-    <div class="card-header"><i class="fas fa-users"></i> 系统用户档案</div>
-    <p class="section-note">支持管理员对用户姓名与联系方式进行维护，删除操作请谨慎执行。</p>
+    <div class="card-header"><i class="fas fa-users"></i> 用户列表</div>
+    <p class="section-note">可修改姓名和手机号。删除用户前请确认。</p>
 
     <div class="stat-belt">
         <div class="stat-chip"><div class="k">用户总数</div><div class="v">{{ users|length }} 人</div></div>
-        <div class="stat-chip"><div class="k">管理员账号</div><div class="v">{{ users|selectattr('role', 'equalto', 'admin')|list|length }} 人</div></div>
+        <div class="stat-chip"><div class="k">管理员</div><div class="v">{{ users|selectattr('role', 'equalto', 'admin')|list|length }} 人</div></div>
         <div class="stat-chip"><div class="k">普通用户</div><div class="v">{{ users|selectattr('role', 'equalto', 'user')|list|length }} 人</div></div>
     </div>
 
     {% if users and users|length > 0 %}
     <div class="table-shell">
         <table>
-            <tr><th>身份证号 (主键)</th><th>账号与姓名</th><th>联系电话</th><th>系统角色</th><th>管理操作</th></tr>
+            <tr><th>身份证号</th><th>账号与姓名</th><th>联系电话</th><th>角色</th><th>操作</th></tr>
             {% for u in users %}
             <tr>
-                <form action="/admin_manage_user" method="POST">
-                    <input type="hidden" name="id_num" value="{{ u.id_num }}">
-                    <td style="font-family:monospace; color:#4b5563;">{{ u.id_num }}</td>
-                    <td>
-                        <div style="display:flex; flex-direction:column; gap:6px;">
-                            <input type="text" value="{{ u.username }}" readonly style="border:none; padding:0; background:transparent; font-weight:600; color:var(--text-main);">
-                            <input type="text" name="name" value="{{ u.name }}" placeholder="真实姓名" style="padding:6px; font-size:13px; max-width: 120px;">
-                        </div>
-                    </td>
-                    <td><input type="text" name="phone" value="{{ u.phone }}" placeholder="手机号" style="padding:6px; font-size:13px; max-width: 120px;"></td>
-                    <td><span class="badge {% if u.role=='admin' %}badge-red{% else %}badge-blue{% endif %}">{{ u.role }}</span></td>
-                    <td>
+                {% set form_id = 'user-form-' ~ loop.index %}
+                <td style="font-family:monospace; color:#4b5563;">{{ u.id_num }}</td>
+                <td>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <input type="text" value="{{ u.username }}" readonly style="border:none; padding:0; background:transparent; font-weight:600; color:var(--text-main);">
+                        <input type="text" name="name" form="{{ form_id }}" value="{{ u.name }}" placeholder="真实姓名" style="padding:6px; font-size:13px; max-width: 120px;">
+                    </div>
+                </td>
+                <td><input type="text" name="phone" form="{{ form_id }}" value="{{ u.phone }}" placeholder="手机号" style="padding:6px; font-size:13px; max-width: 120px;"></td>
+                <td><span class="badge {% if u.role=='admin' %}badge-red{% else %}badge-blue{% endif %}">{{ u.role }}</span></td>
+                <td>
+                    <form id="{{ form_id }}" action="/admin_manage_user" method="POST">
+                        <input type="hidden" name="id_num" value="{{ u.id_num }}">
                         <div class="table-actions">
                             <button type="submit" name="action" value="edit" class="btn btn-outline btn-sm" title="保存修改"><i class="fas fa-save"></i></button>
-                            <button type="submit" name="action" value="delete" class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认删除该用户档案？')" title="删除用户"><i class="fas fa-trash"></i></button>
+                            <button type="submit" name="action" value="delete" class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认删除该用户？')" title="删除用户"><i class="fas fa-trash"></i></button>
                         </div>
-                    </td>
-                </form>
+                    </form>
+                </td>
             </tr>
             {% endfor %}
         </table>
     </div>
     {% else %}
     {% set empty_icon = 'fa-users-slash' %}
-    {% set empty_message = '当前暂无用户档案数据' %}
+    {% set empty_message = '暂无用户数据' %}
     {% include 'dashboard/sections/empty_state.html' %}
     {% endif %}
 </div>

@@ -620,6 +620,18 @@
             gap: 18px;
         }
 
+        .orders-center-layout {
+            display: grid;
+            grid-template-columns: 1.35fr 1fr;
+            gap: 18px;
+            align-items: start;
+        }
+
+        .orders-left,
+        .orders-right {
+            min-width: 0;
+        }
+
         .sub-card {
             border: 1px solid #d9e6f5;
             background: #ffffff;
@@ -860,7 +872,8 @@
 
             .split-layout,
             .profile-grid,
-            .stat-belt {
+            .stat-belt,
+            .orders-center-layout {
                 grid-template-columns: 1fr;
             }
         }
@@ -877,15 +890,14 @@
     <div class="nav-list">
         {% if session.get('role') == 'user' %}
         <a href="/" class="nav-item {% if active_tab == 'book' %}active{% endif %}"><i class="fas fa-search"></i> 车票预订</a>
-        <a href="/reschedule_ui" class="nav-item {% if active_tab == 'reschedule' %}active{% endif %}"><i class="fas fa-exchange-alt"></i> 办理改签</a>
-        <a href="/refund_ui" class="nav-item {% if active_tab == 'refund' %}active{% endif %}"><i class="fas fa-receipt"></i> 订单管理</a>
+        <a href="/orders_ui" class="nav-item {% if active_tab == 'orders' %}active{% endif %}"><i class="fas fa-receipt"></i> 订单中心</a>
         <a href="/profile" class="nav-item {% if active_tab == 'profile' %}active{% endif %}"><i class="fas fa-user"></i> 个人信息</a>
         {% endif %}
 
         {% if session.get('role') == 'admin' %}
         <a href="/" class="nav-item {% if active_tab == 'book' or active_tab == 'query' %}active{% endif %}"><i class="fas fa-search"></i> 票务查询</a>
         <a href="/trains" class="nav-item {% if active_tab == 'trains' %}active{% endif %}"><i class="fas fa-subway"></i> 车次管理</a>
-        <a href="/users" class="nav-item {% if active_tab == 'users' %}active{% endif %}"><i class="fas fa-users"></i> 用户档案管理</a>
+        <a href="/users" class="nav-item {% if active_tab == 'users' %}active{% endif %}"><i class="fas fa-users"></i> 用户管理</a>
         {% endif %}
     </div>
     <div class="user-footer">
@@ -893,7 +905,7 @@
             <div class="avatar">{{ session.get('name')[0] if session.get('name') else 'A' }}</div>
             <div class="user-names">
                 <span class="name">{{ session.get('name', '管理员') }}</span>
-                <span class="role">{% if session.get('role') == 'admin' %}系统管理员{% else %}个人用户{% endif %}</span>
+                <span class="role">{% if session.get('role') == 'admin' %}管理员{% else %}普通用户{% endif %}</span>
             </div>
         </div>
         <a href="/logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i> 安全退出</a>
@@ -903,16 +915,15 @@
 <div class="main-wrapper">
     <header class="top-header">
         <h2 class="header-title">
-            {% if active_tab == 'book' or active_tab == 'query' %}<i class="fas fa-search"></i> 车票预订与查询
-            {% elif active_tab == 'reschedule' %}<i class="fas fa-exchange-alt"></i> 车票改签业务
-            {% elif active_tab == 'refund' %}<i class="fas fa-receipt"></i> 我的历史订单
-            {% elif active_tab == 'profile' %}<i class="fas fa-user-cog"></i> 个人账号设置
-            {% elif active_tab == 'trains' %}<i class="fas fa-subway"></i> 车次调度与管理
-            {% elif active_tab == 'users' %}<i class="fas fa-users"></i> 系统用户档案监控
+            {% if active_tab == 'book' or active_tab == 'query' %}<i class="fas fa-search"></i> 车票查询与订票
+            {% elif active_tab == 'orders' %}<i class="fas fa-receipt"></i> 订单中心
+            {% elif active_tab == 'profile' %}<i class="fas fa-user-cog"></i> 个人信息
+            {% elif active_tab == 'trains' %}<i class="fas fa-subway"></i> 车次管理
+            {% elif active_tab == 'users' %}<i class="fas fa-users"></i> 用户管理
             {% endif %}
         </h2>
         <div class="header-meta">
-            <span class="meta-pill"><i class="fas fa-user-shield"></i> {{ '管理员视图' if session.get('role') == 'admin' else '用户视图' }}</span>
+            <span class="meta-pill"><i class="fas fa-user-shield"></i> {{ '管理员' if session.get('role') == 'admin' else '用户' }}</span>
             <span class="meta-pill"><i class="fas fa-calendar-alt"></i> <span id="header-date-text">运营中</span></span>
         </div>
     </header>

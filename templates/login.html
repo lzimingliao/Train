@@ -150,10 +150,6 @@
             color: var(--rail-accent);
         }
 
-        .role-radio {
-            display: none;
-        }
-
         .btn-login {
             background-color: var(--rail-blue);
             color: white;
@@ -235,13 +231,8 @@
             {% endwith %}
 
             <form action="/login" method="POST">
-
-                <input type="radio" name="role" id="role_user" value="user" class="role-radio" checked>
-                <input type="radio" name="role" id="role_admin" value="admin" class="role-radio">
-
                 <div class="custom-tabs">
-                    <div class="tab-item active" id="tab_user" onclick="switchRole('user')">乘客登录</div>
-                    <div class="tab-item" id="tab_admin" onclick="switchRole('admin')">管理后台</div>
+                    <div class="tab-item active">统一登录</div>
                 </div>
 
                 <div class="form-floating mb-4">
@@ -257,40 +248,16 @@
                     </button>
                 </div>
 
-                <button type="submit" class="btn btn-login w-100">立即登录</button>
+                <button type="submit" class="btn btn-login w-100">登录</button>
             </form>
 
             <div class="register-hint" id="register_area">
-                还没有账号？ <a href="/register">立即注册</a>
+                没有账号？ <a href="/register">去注册</a>
             </div>
         </div>
     </div>
 
     <script>
-        // 切换乘客/管理员角色逻辑
-        function switchRole(role) {
-            const tabUser = document.getElementById('tab_user');
-            const tabAdmin = document.getElementById('tab_admin');
-            const radioUser = document.getElementById('role_user');
-            const radioAdmin = document.getElementById('role_admin');
-            const registerArea = document.getElementById('register_area');
-            const usernameLabel = document.getElementById('username_label');
-
-            if (role === 'admin') {
-                tabUser.classList.remove('active');
-                tabAdmin.classList.add('active');
-                radioAdmin.checked = true;
-                registerArea.style.visibility = 'hidden';
-                usernameLabel.innerText = "管理员账号";
-            } else {
-                tabAdmin.classList.remove('active');
-                tabUser.classList.add('active');
-                radioUser.checked = true;
-                registerArea.style.visibility = 'visible';
-                usernameLabel.innerText = "用户名";
-            }
-        }
-
         // 密码可见性切换逻辑
         function togglePasswordVisibility() {
             const passwordInput = document.getElementById('password');

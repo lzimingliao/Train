@@ -3,9 +3,21 @@
 {% block dashboard_content %}
     {% include 'dashboard/sections/ticket_receipt.html' %}
     {% include 'dashboard/sections/query_panel.html' %}
+    {% if active_tab == 'orders' %}
+    <div class="orders-center-layout">
+        <div class="orders-left">
+            {% include 'dashboard/sections/refund_panel.html' %}
+        </div>
+        <div class="orders-right">
+            {% include 'dashboard/sections/reschedule_panel.html' %}
+            {% include 'dashboard/sections/search_results.html' %}
+        </div>
+    </div>
+    {% else %}
     {% include 'dashboard/sections/reschedule_panel.html' %}
     {% include 'dashboard/sections/search_results.html' %}
     {% include 'dashboard/sections/refund_panel.html' %}
+    {% endif %}
     {% include 'dashboard/sections/profile_panel.html' %}
     {% include 'dashboard/sections/trains_panel.html' %}
     {% include 'dashboard/sections/users_panel.html' %}

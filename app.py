@@ -16,7 +16,8 @@ def create_app():
         basedir, "tickets.db"
     )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.secret_key = "super_secret_key_for_flask"
+    app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+    seed_enabled = os.getenv("SEED_DATA", "1") == "1"
 
     db.init_app(app)
 
@@ -25,7 +26,7 @@ def create_app():
     with app.app_context():
         db.create_all()
 
-        if not User.query.first():
+        if seed_enabled and not User.query.first():
             admin = User(
                 username="admin",
                 name="超级管理员",
@@ -96,9 +97,7 @@ def create_app():
 
             db.session.add_all([t1, t2, t3, t4])
             db.session.commit()
-            print(
-                "初始化测试数据已插入！(包含一个测试账号 username: testuser, 密码: Pass1234!)"
-            )
+            print("初始化测试数据已插入！")
 
         all_users = User.query.all()
         user_cache.load_data(all_users)

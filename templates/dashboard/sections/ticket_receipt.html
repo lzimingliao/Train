@@ -2,7 +2,7 @@
 <div class="ticket-receipt">
     <div class="receipt-main">
         <div class="r-header">
-            <span>电子客票凭证 (e-Ticket)</span>
+            <span>电子车票</span>
             <span>订单号: {{ latest_order.order_id }}</span>
         </div>
         <div class="r-route">
@@ -23,7 +23,7 @@
                 <span class="r-val">{{ latest_order.train.arr_time.strftime('%Y-%m-%d %H:%M') }}</span>
             </div>
             <div class="r-item">
-                <span class="r-label">停止检票时间</span>
+                <span class="r-label">检票截止</span>
                 <span class="r-val" id="checkin-time" style="color: var(--danger-color);"></span>
                 <script>
                     (function () {
@@ -46,7 +46,7 @@
     </div>
     <div class="receipt-side">
         <div class="side-seat">{{ latest_order.seat_no }}</div>
-        <div class="side-price">实付款: ¥{{ latest_order.price }}</div>
+        <div class="side-price">票价: ¥{{ latest_order.price }}</div>
     </div>
 </div>
 {% endif %}

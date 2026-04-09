@@ -1,6 +1,6 @@
 {% if active_tab == 'trains' %}
 <div class="panel-card">
-    <div class="card-header"><i class="fas fa-plus-circle"></i> 录入新车次</div>
+    <div class="card-header"><i class="fas fa-plus-circle"></i> 新增车次</div>
     <form action="/admin_manage_train" method="POST">
         <input type="hidden" name="action" value="add">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
@@ -13,12 +13,12 @@
             <div class="input-group"><label>车厢数</label><input type="number" name="carriage_count" value="8" required></div>
             <div class="input-group"><label>总座位数</label><input type="number" name="total_seats" value="160" required></div>
         </div>
-        <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> 提交录入</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> 新增</button>
     </form>
 </div>
 
 <div class="panel-card">
-    <div class="card-header"><i class="fas fa-list"></i> 已录入车次管理</div>
+    <div class="card-header"><i class="fas fa-list"></i> 车次列表</div>
     {% if trains and trains|length > 0 %}
     <div class="table-shell">
         <table>
@@ -38,7 +38,7 @@
                     <form action="/admin_manage_train" method="POST">
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="train_no" value="{{ t.train_no }}">
-                        <button class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('警告：确认要删除此车次记录吗？')">删除车次</button>
+                        <button class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认删除该车次？')">删除</button>
                     </form>
                 </td>
             </tr>
@@ -47,7 +47,7 @@
     </div>
     {% else %}
     {% set empty_icon = 'fa-subway' %}
-    {% set empty_message = '当前暂无已录入车次' %}
+    {% set empty_message = '暂无车次数据' %}
     {% include 'dashboard/sections/empty_state.html' %}
     {% endif %}
 </div>

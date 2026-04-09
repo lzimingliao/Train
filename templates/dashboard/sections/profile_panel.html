@@ -1,7 +1,7 @@
 {% if active_tab == 'profile' %}
 <div class="panel-card">
-    <div class="card-header"><i class="fas fa-id-card"></i> 账号基本资料</div>
-    <p class="section-note">当前页面用于维护个人账号信息。证件号为系统主键，不支持修改。</p>
+    <div class="card-header"><i class="fas fa-id-card"></i> 个人信息</div>
+    <p class="section-note">可修改用户名、姓名和手机号。身份证号不可修改。</p>
     <form action="/update_profile" method="POST">
         <div class="profile-grid">
             <div class="input-group">
@@ -17,7 +17,7 @@
                 <input type="text" name="phone" value="{{ user.phone or '' }}" placeholder="请输入11位手机号">
             </div>
             <div class="input-group">
-                <label>证件号码 (系统主键，不可修改)</label>
+                <label>身份证号（不可修改）</label>
                 <input type="text" value="{{ user.id_num }}" readonly disabled>
             </div>
         </div>

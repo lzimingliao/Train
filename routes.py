@@ -1,7 +1,16 @@
 from datetime import datetime
 from functools import wraps
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 from extensions import db
 from models import Order, Train, User
@@ -13,12 +22,27 @@ from utils import (
     perm_tree,
     quick_sort_trains,
     user_cache,
+    validate_date_string,
     validate_id,
     validate_password,
     validate_phone,
+    validate_station_name,
 )
 
 main_bp = Blueprint("main", __name__)
+
+
+def get_user_orders(user_id):
+    return (
+        Order.query.filter_by(user_id=user_id).order_by(Order.booking_time.desc()).all()
+    )
+
+
+def get_active_orders(user_id):
+    return Order.query.filter(
+        Order.user_id == user_id,
+        Order.status.in_(["已出票", "已改签"]),
+    ).all()
 
 
 def permission_required(module, function):
@@ -30,7 +54,7 @@ def permission_required(module, function):
             if not perm_tree.check_permission(
                 session.get("role", "user"), module, function
             ):
-                flash("权限不足，已被安全系统拦截", "error")
+                flash("无权限访问该功能", "error")
                 return redirect(url_for("main.index"))
             return f(*args, **kwargs)
 
@@ -51,23 +75,23 @@ def register_page():
     phone = request.form.get("phone")
 
     if not all([username, password, name, id_num]):
-        flash("注册失败：请填写所有必填信息", "error")
+        flash("请完整填写注册信息", "error")
         return redirect(url_for("main.register_page"))
 
     if user_cache.is_username_exist(username):
-        flash("注册失败：该用户名已被注册", "error")
+        flash("用户名已存在", "error")
         return redirect(url_for("main.register_page"))
 
     if user_cache.is_id_num_exist(id_num):
-        flash("注册失败：该身份证号已被注册", "error")
+        flash("身份证号已存在", "error")
         return redirect(url_for("main.register_page"))
 
     if not validate_id(id_num):
-        flash("身份证号格式无效（需18位，最后一位支持X）", "error")
+        flash("身份证号格式错误（18位，末位可为X）", "error")
         return redirect(url_for("main.register_page"))
 
     if phone and not validate_phone(phone):
-        flash("手机号格式无效（必须为11位数字）", "error")
+        flash("手机号格式错误（11位数字）", "error")
         return redirect(url_for("main.register_page"))
 
     is_valid, msg = validate_password(password)
@@ -82,14 +106,12 @@ def register_page():
         db.session.add(new_user)
         db.session.commit()
         user_cache.add_user(username, id_num)
-        flash(
-            "实名档案建立成功！请登录使用系统。",
-            "success",
-        )
+        flash("注册成功，请登录", "success")
         return redirect(url_for("main.login_page"))
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        flash("服务器繁忙，注册失败请重试", "error")
+        current_app.logger.exception("register_page failed: %s", exc)
+        flash("注册失败，请稍后重试", "error")
         return redirect(url_for("main.register_page"))
 
 
@@ -100,15 +122,13 @@ def login_page():
 
     username = request.form.get("username")
     password = request.form.get("password")
-    role = request.form.get("role")
-
     if not all([username, password]):
         flash("请输入用户名和密码", "error")
         return redirect(url_for("main.login_page"))
 
     user = User.query.filter_by(username=username).first()
 
-    if user and user.check_password(password) and user.role == role:
+    if user and user.check_password(password):
         session["user_id"] = user.user_id
         session["username"] = user.username
         session["role"] = user.role
@@ -116,7 +136,7 @@ def login_page():
         session["id_num"] = user.id_num
         return redirect(url_for("main.index"))
 
-    flash("身份鉴权失败，请检查填写或身份切换", "error")
+    flash("登录失败：用户名或密码错误", "error")
     return redirect(url_for("main.login_page"))
 
 
@@ -136,12 +156,24 @@ def index():
 @permission_required("ticket_module", "query")
 def do_query():
     search_type = request.args.get("search_type")
-    date_str = request.args.get("date")
+    date_str = request.args.get("date", "").strip()
     search_results = []
 
+    if not validate_date_string(date_str):
+        flash("日期格式错误（YYYY-MM-DD）", "error")
+        return redirect(url_for("main.index"))
+
     if search_type == "interval":
-        start_station = request.args.get("start_station", "")
-        end_station = request.args.get("end_station", "")
+        start_station = request.args.get("start_station", "").strip()
+        end_station = request.args.get("end_station", "").strip()
+        if not validate_station_name(start_station) or not validate_station_name(
+            end_station
+        ):
+            flash(
+                "站名格式错误（仅限中英文、数字、空格、短横线，最长30）",
+                "error",
+            )
+            return redirect(url_for("main.index"))
         raw_trains = Train.query.filter(
             db.func.date(Train.dep_time) == date_str,
             Train.dep_station.ilike(f"%{start_station}%"),
@@ -150,7 +182,13 @@ def do_query():
         search_results = quick_sort_trains(raw_trains)
 
     elif search_type == "station":
-        station = request.args.get("station", "")
+        station = request.args.get("station", "").strip()
+        if not validate_station_name(station):
+            flash(
+                "站名格式错误（仅限中英文、数字、空格、短横线，最长30）",
+                "error",
+            )
+            return redirect(url_for("main.index"))
         raw_trains = Train.query.filter(
             db.func.date(Train.dep_time) == date_str,
             db.or_(
@@ -159,6 +197,9 @@ def do_query():
             ),
         ).all()
         search_results = bubble_sort_by_time(raw_trains)
+    else:
+        flash("查询类型无效", "error")
+        return redirect(url_for("main.index"))
 
     source_tab = request.args.get("source_tab", "book")
     reschedule_order_id = request.args.get("reschedule_order_id")
@@ -180,12 +221,12 @@ def book_ticket():
     train = Train.query.get(train_no)
 
     if not train or train.rem_seats <= 0:
-        flash("票源紧张，该车次已无座", "error")
+        flash("该车次无余票", "error")
         return redirect(url_for("main.index"))
 
     new_seat_map, seat = allocate_seat_by_type(train.seat_map, seat_type)
     if not seat:
-        flash("您偏好的位置或该车次已售罄", "error")
+        flash("选座失败：该座位类型已无票", "error")
         return redirect(url_for("main.index"))
 
     try:
@@ -203,62 +244,68 @@ def book_ticket():
         )
         db.session.add(new_order)
         db.session.commit()
-        flash("🎉 出票成功！", "success")
+        flash("订票成功", "success")
 
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        flash("系统繁忙，出票失败请重试", "error")
+        current_app.logger.exception("book_ticket failed: %s", exc)
+        flash("订票失败，请稍后重试", "error")
         return redirect(url_for("main.index"))
 
-    orders = (
-        Order.query.filter_by(user_id=session.get("user_id"))
-        .order_by(Order.booking_time.desc())
-        .all()
-    )
+    user_id = session.get("user_id")
+    orders = get_user_orders(user_id)
+    active_orders = get_active_orders(user_id)
     return render_template(
-        "index.html", active_tab="refund", latest_order=new_order, orders=orders
+        "index.html",
+        active_tab="orders",
+        latest_order=new_order,
+        orders=orders,
+        active_orders=active_orders,
     )
 
 
 @main_bp.route("/refund_ui")
 @permission_required("ticket_module", "refund")
 def refund_ui():
-    orders = (
-        Order.query.filter_by(user_id=session.get("user_id"))
-        .order_by(Order.booking_time.desc())
-        .all()
+    return redirect(url_for("main.orders_ui"))
+
+
+@main_bp.route("/orders_ui")
+@permission_required("ticket_module", "refund")
+def orders_ui():
+    orders = get_user_orders(session.get("user_id"))
+    active_orders = get_active_orders(session.get("user_id"))
+    return render_template(
+        "index.html", active_tab="orders", orders=orders, active_orders=active_orders
     )
-    return render_template("index.html", active_tab="refund", orders=orders)
 
 
 @main_bp.route("/delete_order/<order_id>", methods=["POST"])
 @permission_required("ticket_module", "refund")
 def delete_order(order_id):
     order = Order.query.get(order_id)
-    if order and order.user_id == session.get("user_id") and order.status != "已退票":
+    if order and order.user_id == session.get("user_id"):
         try:
             train = Train.query.get(order.train_no)
             if train:
                 train.seat_map = free_seat(train.seat_map, order.seat_no)
                 train.rem_seats += 1
-            order.status = "已退票"
+            db.session.delete(order)
             db.session.commit()
-            flash("退票成功，资金已原路返回，座位已释放", "success")
-        except Exception:
+            flash("退票成功", "success")
+        except Exception as exc:
             db.session.rollback()
-            flash("系统繁忙，退票失败请重试", "error")
-    return redirect(url_for("main.refund_ui"))
+            current_app.logger.exception("delete_order failed: %s", exc)
+            flash("退票失败，请稍后重试", "error")
+    else:
+        flash("订单不存在或无权限", "error")
+    return redirect(url_for("main.orders_ui"))
 
 
 @main_bp.route("/reschedule_ui")
 @permission_required("ticket_module", "reschedule")
 def reschedule_ui():
-    active_orders = Order.query.filter(
-        Order.user_id == session.get("user_id"), Order.status.in_(["已出票", "已改签"])
-    ).all()
-    return render_template(
-        "index.html", active_tab="reschedule", active_orders=active_orders
-    )
+    return redirect(url_for("main.orders_ui"))
 
 
 @main_bp.route("/do_reschedule", methods=["POST"])
@@ -271,33 +318,50 @@ def do_reschedule():
     new_train = Train.query.get(new_train_no)
 
     if not order or order.user_id != session.get("user_id"):
-        flash("非法操作", "error")
-        return redirect(url_for("main.reschedule_ui"))
+        flash("请求无效", "error")
+        return redirect(url_for("main.orders_ui"))
 
     if not new_train or new_train.rem_seats <= 0:
-        flash("改签失败：目标车次不存在或已无票", "error")
-        return redirect(url_for("main.reschedule_ui"))
+        flash("改签失败：目标车次不存在或无余票", "error")
+        return redirect(url_for("main.orders_ui"))
 
     old_train = Train.query.get(order.train_no)
+    if not old_train:
+        flash("改签失败：原车次不存在", "error")
+        return redirect(url_for("main.orders_ui"))
 
-    is_valid_rule = (
+    if (
+        new_train.train_no == old_train.train_no
+        and new_train.dep_time == old_train.dep_time
+    ):
+        flash("改签失败：新车次与原车次相同", "error")
+        return redirect(url_for("main.orders_ui"))
+
+    old_date = old_train.dep_time.date()
+    new_date = new_train.dep_time.date()
+    same_interval = (
         new_train.dep_station == old_train.dep_station
         and new_train.arr_station == old_train.arr_station
     )
+    same_day_same_interval = same_interval and new_date == old_date
+    same_train_diff_day = (
+        new_train.train_no == old_train.train_no and new_date != old_date
+    )
+
+    is_valid_rule = same_day_same_interval or same_train_diff_day
 
     if not is_valid_rule:
-        flash("改签失败：不符合同区间或同日期的改签规则", "error")
-        return redirect(url_for("main.reschedule_ui"))
+        flash("改签失败：仅支持同日同区间或同车次改期", "error")
+        return redirect(url_for("main.orders_ui"))
 
     new_map, new_seat = allocate_seat_by_type(new_train.seat_map, seat_type)
     if not new_seat:
-        flash("改签失败：目标车次所需座位已售罄", "error")
-        return redirect(url_for("main.reschedule_ui"))
+        flash("改签失败：目标车次座位不足", "error")
+        return redirect(url_for("main.orders_ui"))
 
     try:
-        if old_train:
-            old_train.seat_map = free_seat(old_train.seat_map, order.seat_no)
-            old_train.rem_seats += 1
+        old_train.seat_map = free_seat(old_train.seat_map, order.seat_no)
+        old_train.rem_seats += 1
 
         new_train.seat_map = new_map
         new_train.rem_seats -= 1
@@ -312,19 +376,22 @@ def do_reschedule():
         order.dep_time = new_train.dep_time
 
         db.session.commit()
-        flash(f"🔄 改签成功！您的新座位是 {new_seat}", "success")
-    except Exception:
+        flash(f"改签成功，新座位：{new_seat}", "success")
+    except Exception as exc:
         db.session.rollback()
-        flash("系统繁忙，改签失败请重试", "error")
-        return redirect(url_for("main.reschedule_ui"))
+        current_app.logger.exception("do_reschedule failed: %s", exc)
+        flash("改签失败，请稍后重试", "error")
+        return redirect(url_for("main.orders_ui"))
 
-    orders = (
-        Order.query.filter_by(user_id=session.get("user_id"))
-        .order_by(Order.booking_time.desc())
-        .all()
-    )
+    user_id = session.get("user_id")
+    orders = get_user_orders(user_id)
+    active_orders = get_active_orders(user_id)
     return render_template(
-        "index.html", active_tab="refund", latest_order=order, orders=orders
+        "index.html",
+        active_tab="orders",
+        latest_order=order,
+        orders=orders,
+        active_orders=active_orders,
     )
 
 
@@ -344,12 +411,16 @@ def update_profile():
     phone = request.form.get("phone", "").strip()
 
     if not new_username or not name:
-        flash("保存失败：用户名和姓名不能为空", "error")
+        flash("用户名和姓名不能为空", "error")
+        return redirect(url_for("main.profile_page"))
+
+    if phone and not validate_phone(phone):
+        flash("手机号格式错误（11位数字）", "error")
         return redirect(url_for("main.profile_page"))
 
     if new_username != user.username:
         if user_cache.is_username_exist(new_username):
-            flash("保存失败：该登录名已被他人使用", "error")
+            flash("用户名已存在", "error")
             return redirect(url_for("main.profile_page"))
         user_cache.update_username(user.username, new_username)
         user.username = new_username
@@ -361,10 +432,11 @@ def update_profile():
         db.session.commit()
         session["username"] = user.username
         session["name"] = user.name
-        flash("个人资料已永久保存并生效！", "success")
-    except Exception:
+        flash("保存成功", "success")
+    except Exception as exc:
         db.session.rollback()
-        flash("系统繁忙，保存失败", "error")
+        current_app.logger.exception("update_profile failed: %s", exc)
+        flash("保存失败，请稍后重试", "error")
 
     return redirect(url_for("main.profile_page"))
 
@@ -399,19 +471,33 @@ def admin_manage_train():
         if Order.query.filter(
             Order.train_no == train_no, Order.status.in_(["已出票", "已改签"])
         ).first():
-            flash("无法删除：该车次正在承运中", "error")
+            flash("删除失败：该车次存在有效订单", "error")
         else:
             try:
                 Train.query.filter_by(train_no=train_no).delete()
                 db.session.commit()
-                flash(f"已注销车次 {train_no}", "success")
-            except Exception:
+                flash(f"车次 {train_no} 已删除", "success")
+            except Exception as exc:
                 db.session.rollback()
-                flash("注销失败：可能存在关联的历史退票订单记录，受外键保护", "error")
+                current_app.logger.exception(
+                    "admin_manage_train delete failed: %s", exc
+                )
+                flash("删除失败：存在关联数据", "error")
 
     elif action == "add":
         if Train.query.get(train_no):
-            flash("车次编号冲突", "error")
+            flash("车次编号已存在", "error")
+            return redirect(url_for("main.trains_page"))
+
+        dep_station = request.form.get("dep_station", "").strip()
+        arr_station = request.form.get("arr_station", "").strip()
+        if not validate_station_name(dep_station) or not validate_station_name(
+            arr_station
+        ):
+            flash(
+                "站名格式错误（仅限中英文、数字、空格、短横线，最长30）",
+                "error",
+            )
             return redirect(url_for("main.trains_page"))
 
         dep_time_str = request.form.get("dep_time", "").replace("T", " ")
@@ -424,20 +510,20 @@ def admin_manage_train():
             total_seats = int(request.form.get("total_seats", 0))
             carriage_count = int(request.form.get("carriage_count", 5))
         except ValueError:
-            flash("时间或数值格式填写错误", "error")
+            flash("时间或数值格式错误", "error")
             return redirect(url_for("main.trains_page"))
 
         if dep_time >= arr_time:
-            flash("逻辑错误：到达时间必须晚于出发时间", "error")
+            flash("时间错误：到达时间必须晚于出发时间", "error")
             return redirect(url_for("main.trains_page"))
         if price < 0 or total_seats < 0:
-            flash("逻辑错误：票价和总座位数不能为负", "error")
+            flash("票价和座位数不能为负", "error")
             return redirect(url_for("main.trains_page"))
 
         t = Train(
             train_no=train_no,
-            dep_station=request.form.get("dep_station"),
-            arr_station=request.form.get("arr_station"),
+            dep_station=dep_station,
+            arr_station=arr_station,
             dep_time=dep_time,
             arr_time=arr_time,
             price=price,
@@ -449,10 +535,11 @@ def admin_manage_train():
         try:
             db.session.add(t)
             db.session.commit()
-            flash(f"已新增发布车次 {train_no}", "success")
-        except Exception:
+            flash(f"车次 {train_no} 新增成功", "success")
+        except Exception as exc:
             db.session.rollback()
-            flash("保存车次失败，数据库异常", "error")
+            current_app.logger.exception("admin_manage_train add failed: %s", exc)
+            flash("新增车次失败", "error")
 
     return redirect(url_for("main.trains_page"))
 
@@ -471,17 +558,18 @@ def admin_manage_user():
     if action == "edit":
         phone = request.form.get("phone")
         if phone and not validate_phone(phone):
-            flash("手机号格式无效（必须为11位数字）", "error")
+            flash("手机号格式错误（11位数字）", "error")
             return redirect(url_for("main.users_page"))
 
         user.name = request.form.get("name")
         user.phone = phone
         try:
             db.session.commit()
-            flash("用户资料已强制更新", "success")
-        except Exception:
+            flash("用户信息已更新", "success")
+        except Exception as exc:
             db.session.rollback()
-            flash("更新失败", "error")
+            current_app.logger.exception("admin_manage_user edit failed: %s", exc)
+            flash("更新失败，请稍后重试", "error")
 
     elif action == "delete" and user.role != "admin":
         try:
@@ -490,9 +578,10 @@ def admin_manage_user():
             db.session.delete(user)
             db.session.commit()
             user_cache.remove_user(username_to_remove, id_num_to_remove)
-            flash("用户档案已彻底销毁", "success")
-        except Exception:
+            flash("用户已删除", "success")
+        except Exception as exc:
             db.session.rollback()
-            flash("销毁失败：可能存在关联的历史订单数据，受外键保护", "error")
+            current_app.logger.exception("admin_manage_user delete failed: %s", exc)
+            flash("删除失败：存在关联订单", "error")
 
     return redirect(url_for("main.users_page"))

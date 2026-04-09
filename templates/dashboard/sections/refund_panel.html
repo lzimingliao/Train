@@ -1,10 +1,10 @@
-{% if active_tab == 'refund' %}
+{% if active_tab == 'orders' %}
 <div class="panel-card">
-    <div class="card-header"><i class="fas fa-history"></i> 历史交易及乘车记录</div>
+    <div class="card-header"><i class="fas fa-history"></i> 订单与退票</div>
     {% if orders and orders|length > 0 %}
     <div class="table-shell">
         <table>
-            <tr><th>订单编号 / 创建时间</th><th>行程信息</th><th>支付明细</th><th>当前状态</th><th>管理操作</th></tr>
+            <tr><th>订单号 / 时间</th><th>行程</th><th>票价与座位</th><th>状态</th><th>操作</th></tr>
             {% for order in orders %}
             <tr>
                 <td>
@@ -32,10 +32,10 @@
                 <td>
                     {% if order.status == '已出票' or order.status == '已改签' %}
                     <form action="/delete_order/{{ order.order_id }}" method="POST">
-                        <button class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认提交退票申请？对应的资金将原路返回。')">申请退票</button>
+                        <button class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认退票？')">退票</button>
                     </form>
                     {% else %}
-                    <span style="font-size:13px; color:#9ca3af;">无可用操作</span>
+                    <span style="font-size:13px; color:#9ca3af;">-</span>
                     {% endif %}
                 </td>
             </tr>
@@ -44,7 +44,7 @@
     </div>
     {% else %}
     {% set empty_icon = 'fa-receipt' %}
-    {% set empty_message = '暂无历史订单记录' %}
+    {% set empty_message = '暂无订单' %}
     {% include 'dashboard/sections/empty_state.html' %}
     {% endif %}
 </div>
