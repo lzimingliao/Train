@@ -8,25 +8,12 @@
 {% endif %}
     <p class="section-note">支持直接退票或改签，发车后不可操作。</p>
     {% if orders and orders|length > 0 %}
-    <div class="table-shell">
-        <table>
-            <tr><th>订单号</th><th>行程</th><th>座位 / 票价</th><th>状态</th><th>操作</th></tr>
-            {% for order in orders %}
-            <tr>
-                <td>
-                    <div style="font-family:monospace; color:#4b5563;">{{ order.order_id }}</div>
-                    <div style="font-size:12px; color:#9ca3af; margin-top:4px;">{{ order.booking_time.strftime('%Y-%m-%d %H:%M') }}</div>
-                </td>
-                <td>
-                    <strong style="color:var(--text-main);">{{ order.train_no }}</strong><br>
-                    <span style="font-size:13px; color:#4b5563;">{{ order.train.dep_station }} ➔ {{ order.train.arr_station }}</span><br>
-                    <small style="color:#6b7280;">{{ order.train.dep_time.strftime('%m-%d %H:%M') }}</small>
-                </td>
-                <td>
-                    <div style="font-size:13px; color:#6b7280;">{{ order.seat_no }}</div>
-                    <div style="font-weight:600; margin-top:2px;">¥{{ order.price }}</div>
-                </td>
-                <td>
+    <div class="order-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px;">
+        {% for order in orders %}
+        <div class="order-card" id="order-card-{{ order.order_id }}" style="background: white; border-radius: 12px; box-shadow: var(--shadow-soft); padding: 20px; border: 1px solid var(--border-color); position: relative; transition: all 0.3s ease;">
+            <div class="oc-header" style="display: flex; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+                <span class="oc-id" style="font-family: monospace; color: var(--text-muted); font-size: 13px;">{{ order.order_id }}</span>
+                <span class="oc-status" id="status-{{ order.order_id }}">
                     {% if order.status == '已退票' %}
                     <span class="badge badge-gray">{{ order.status }}</span>
                     {% elif order.status == '已改签' %}
@@ -34,25 +21,47 @@
                     {% else %}
                     <span class="badge badge-green">{{ order.status }}</span>
                     {% endif %}
-                </td>
-                <td>
-                    {% if (order.status == '已出票' or order.status == '已改签') and order.dep_time > now_time %}
-                    <div class="table-actions">
-                        <form action="/delete_order/{{ order.order_id }}" method="POST">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                            <button class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认退票？')">退票</button>
-                        </form>
-                        <a href="/do_query?search_type=interval&source_tab=orders&reschedule_order_id={{ order.order_id }}&date={{ order.dep_time.strftime('%Y-%m-%d') }}&start_station={{ order.dep_station }}&end_station={{ order.arr_station }}" class="btn btn-outline btn-sm"><i class="fas fa-edit"></i> 改签</a>
+                </span>
+            </div>
+
+            <div class="oc-body" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div class="oc-station" style="text-align: center;">
+                    <div style="font-size: 22px; font-weight: 700; color: var(--text-main);">{{ order.train.dep_station }}</div>
+                    <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">{{ order.train.dep_time.strftime('%H:%M') }}</div>
+                </div>
+
+                <div class="oc-train-info" style="text-align: center; flex: 1; margin: 0 16px;">
+                    <div style="font-weight: 600; color: var(--rail-blue); margin-bottom: 4px;">{{ order.train_no }}</div>
+                    <div class="oc-line" style="height: 1px; background: #ccc; position: relative;">
+                        <i class="fas fa-angle-right" style="position: absolute; right: -4px; top: -6px; color: #ccc;"></i>
                     </div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">{{ order.train.dep_time.strftime('%Y-%m-%d') }}</div>
+                </div>
+
+                <div class="oc-station" style="text-align: center;">
+                    <div style="font-size: 22px; font-weight: 700; color: var(--text-main);">{{ order.train.arr_station }}</div>
+                    <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">{{ order.train.arr_time.strftime('%H:%M') }}</div>
+                </div>
+            </div>
+
+            <div class="oc-footer" style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px;">
+                <div class="oc-price">
+                    <span style="font-size: 18px; font-weight: 700; color: var(--danger-color);">¥{{ order.price }}</span>
+                    <span style="font-size: 13px; color: var(--text-muted); margin-left: 8px;">{{ order.seat_no }}</span>
+                </div>
+                <div class="oc-actions" id="actions-{{ order.order_id }}">
+                    {% if (order.status == '已出票' or order.status == '已改签') and order.dep_time > now_time %}
+                        <button class="btn btn-outline btn-sm action-refund" data-order-id="{{ order.order_id }}" style="color:var(--danger-color); border-color:#fca5a5; padding: 4px 12px; font-size: 13px;">退票</button>
+                        <button class="btn btn-primary btn-sm action-reschedule" data-order-id="{{ order.order_id }}" data-dep-station="{{ order.train.dep_station }}" data-arr-station="{{ order.train.arr_station }}" data-date="{{ order.dep_time.strftime('%Y-%m-%d') }}" style="padding: 4px 12px; font-size: 13px;">改签</button>
                     {% elif order.status == '已出票' or order.status == '已改签' %}
                     <span style="font-size:13px; color:#9ca3af;">已过发车</span>
                     {% else %}
                     <span style="font-size:13px; color:#9ca3af;">-</span>
                     {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
     {% else %}
     {% set empty_icon = 'fa-receipt' %}

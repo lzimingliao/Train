@@ -1,7 +1,6 @@
 {% if active_tab == 'users' %}
 <div class="panel-card">
-    <div class="card-header"><i class="fas fa-users"></i> 用户列表</div>
-    <p class="section-note">可修改姓名和手机号。管理员账号不可删除；存在有效订单的用户需先退票。</p>
+    <div class="card-header"><i class="fas fa-users"></i>用户列表</div>
 
     <div class="stat-belt">
         <div class="stat-chip"><div class="k">用户总数</div><div class="v">{{ users|length }} 人</div></div>
@@ -12,7 +11,7 @@
     {% if users and users|length > 0 %}
     <div class="table-shell">
         <table>
-            <tr><th>身份证号</th><th>账号与姓名</th><th>联系电话</th><th>角色</th><th>操作</th></tr>
+            <tr><th>身份证号</th><th>用户名、真实姓名</th><th>手机号</th><th>角色</th><th>操作</th></tr>
             {% for u in users %}
             <tr>
                 {% set form_id = 'user-form-' ~ loop.index %}

@@ -1,32 +1,35 @@
 {% if active_tab == 'orders' %}
-{% if reschedule_order_id %}
-<div class="sub-card sub-card-accent">
-    <h4><i class="fas fa-sync-alt"></i> 改签进行中</h4>
-    <p class="section-note">当前订单：<strong>{{ reschedule_order_id }}</strong></p>
-    <div class="compact-hint">
-        <p><i class="fas fa-angle-right"></i> 在左侧“改签候选车次”中选择车次和座位后确认改签。</p>
-        <p><i class="fas fa-angle-right"></i> 如需重新筛选，可修改日期和站点后再次查询。</p>
+<div id="reschedule-modal-backdrop" style="display: none; position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center; padding: 20px;">
+<div id="reschedule-modal" class="panel-card" style="width: 100%; max-width: 800px; max-height: 90vh; overflow-y: auto; background: white; border-radius: 12px; box-shadow: var(--shadow-strong); position: relative; display: flex; flex-direction: column;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 16px 20px;">
+        <div><i class="fas fa-sync-alt"></i> 改签 - 订单: <span id="reschedule-modal-order-id" style="font-weight: bold; color: var(--rail-blue);"></span></div>
+        <button id="close-reschedule-modal" class="btn btn-outline btn-sm" style="color: var(--text-muted); border: none; font-size: 20px; line-height: 1;"><i class="fas fa-times"></i></button>
     </div>
-    <form action="/do_query" method="GET" style="margin-top: 12px;">
-        <input type="hidden" name="search_type" value="interval">
-        <input type="hidden" name="source_tab" value="orders">
-        <input type="hidden" name="reschedule_order_id" value="{{ reschedule_order_id }}">
-        <div class="input-group" style="margin-bottom: 8px;"><label>日期</label><input type="date" name="date" required value="{{ request.args.get('date', '') }}"></div>
-        <div class="input-group" style="margin-bottom: 8px;"><label>出发站</label><input type="text" name="start_station" required value="{{ request.args.get('start_station', '') }}"></div>
-        <div class="input-group"><label>到达站</label><input type="text" name="end_station" required value="{{ request.args.get('end_station', '') }}"></div>
-        <button class="btn btn-outline" style="width: 100%; margin-top: 10px;"><i class="fas fa-search"></i> 重新筛选车次</button>
-    </form>
-    <a href="/orders_ui" class="btn btn-primary" style="width: 100%; margin-top: 10px;"><i class="fas fa-times-circle"></i> 退出改签模式</a>
-</div>
-{% else %}
-<div class="sub-card">
-    <h4><i class="fas fa-list-ul"></i> 改签入口</h4>
-    <p class="section-note">在左侧订单列表点击“改签”即可进入候选车次选择。</p>
-    <div class="compact-hint">
-        <p><i class="fas fa-circle"></i> 仅支持未发车订单</p>
-        <p><i class="fas fa-circle"></i> 推荐先看同区间同日期车次</p>
-        <p><i class="fas fa-circle"></i> 目标车次需有余票</p>
+
+    <div class="modal-body" style="padding: 24px; display: flex; flex-direction: column; gap: 24px;">
+        <form id="reschedule-search-form" class="search-form" style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-end; background: var(--panel-secondary); padding: 24px; border-radius: 12px; border: 1px solid var(--border-color);">
+            <input type="hidden" name="search_type" value="interval">
+            <input type="hidden" name="source_tab" value="orders">
+            <input type="hidden" name="reschedule_order_id" id="form-reschedule-order-id" value="">
+            <div class="input-group" style="flex: 1; min-width: 180px;"><label>日期</label><input type="date" name="date" id="reschedule-date" required style="width: 100%;"></div>
+            <div class="input-group" style="flex: 1; min-width: 180px;"><label>出发站</label><input type="text" name="start_station" id="reschedule-start" required style="width: 100%;"></div>
+            <div class="input-group" style="flex: 1; min-width: 180px;"><label>到达站</label><input type="text" name="end_station" id="reschedule-end" required style="width: 100%;"></div>
+            <button type="button" id="btn-reschedule-search" class="btn btn-primary" style="height: 42px; padding: 0 24px; flex-shrink: 0;"><i class="fas fa-search"></i> 查找车次</button>
+        </form>
+
+        <div id="reschedule-results-container" style="min-height: 200px; position: relative;">
+            <div id="reschedule-loading" style="display: none; position: absolute; inset: 0; background: rgba(255,255,255,0.8); justify-content: center; align-items: center; z-index: 10;">
+                <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--rail-blue);"></i>
+            </div>
+            <div id="reschedule-results-content">
+                <!-- 搜索结果将动态填充到这里 -->
+                <div style="text-align: center; color: var(--text-muted); padding: 40px 0;">
+                    <i class="fas fa-train fa-3x" style="color: #e5e7eb; margin-bottom: 12px;"></i>
+                    <p>请输入条件以查询可用车次</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-{% endif %}
+</div>
 {% endif %}

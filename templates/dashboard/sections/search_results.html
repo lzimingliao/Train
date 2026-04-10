@@ -1,16 +1,16 @@
 {% if search_results is defined and searched %}
     {% if search_results|length > 0 %}
-    <div class="panel-card">
+    <div class="{% if active_tab == 'orders' and reschedule_order_id %}sub-card{% else %}panel-card{% endif %}" style="{% if active_tab == 'orders' and reschedule_order_id %}box-shadow: none; border: 1px solid var(--border-color);{% endif %}">
         <div class="card-header"><i class="fas fa-table"></i> {% if active_tab == 'orders' and reschedule_order_id %}改签候选车次{% else %}查询结果{% endif %}</div>
-        <div class="stat-belt">
-            <div class="stat-chip"><div class="k">结果总数</div><div class="v">{{ search_results|length }} 条</div></div>
-            <div class="stat-chip"><div class="k">可订票车次</div><div class="v">{{ search_results|selectattr('rem_seats', 'gt', 0)|list|length }} 条</div></div>
-            <div class="stat-chip"><div class="k">模式</div><div class="v">{{ '管理员' if active_tab == 'query' else '用户' }}</div></div>
+        <div class="stat-belt" style="margin-bottom: 20px; gap: 20px;">
+            <div class="stat-chip" style="padding: 14px; border-radius: 8px;"><div class="k">结果总数</div><div class="v">{{ search_results|length }} 条</div></div>
+            <div class="stat-chip" style="padding: 14px; border-radius: 8px;"><div class="k">可订票车次</div><div class="v">{{ search_results|selectattr('rem_seats', 'gt', 0)|list|length }} 条</div></div>
+            <div class="stat-chip" style="padding: 14px; border-radius: 8px;"><div class="k">模式</div><div class="v">{{ '管理员' if active_tab == 'query' else '用户' }}</div></div>
         </div>
 
-        <div class="table-shell">
-            <table>
-                <tr><th>车次</th><th>出发 / 到达</th><th>出发 / 到达时间</th><th>票价</th><th>余票</th><th>操作</th></tr>
+        <div class="table-shell" style="border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); overflow-x: auto;">
+            <table style="width: 100%; min-width: 800px;">
+                <tr><th style="padding: 16px;">车次</th><th>出发 / 到达</th><th>出发 / 到达时间</th><th>票价</th><th>余票</th><th style="padding: 16px; min-width: 260px;">操作</th></tr>
                 {% for t in search_results %}
                 {% set departed = t.dep_time <= now_time %}
                 <tr>

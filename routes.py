@@ -6,6 +6,7 @@ from flask import (
     Blueprint,
     current_app,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -221,6 +222,15 @@ def do_query():
     source_tab = request.args.get("source_tab", "book")
     reschedule_order_id = request.args.get("reschedule_order_id")
 
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return render_template(
+            "dashboard/sections/search_results.html",
+            active_tab=source_tab,
+            search_results=search_results,
+            reschedule_order_id=reschedule_order_id,
+            searched=True,
+        )
+
     return render_template(
         "index.html",
         active_tab=source_tab,
@@ -307,6 +317,8 @@ def delete_order(order_id):
     if order and order.user_id == session.get("user_id"):
         if is_departed(order.dep_time):
             flash("该车票已发车，无法退票", "error")
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"success": False, "message": "该车票已发车，无法退票"})
             return redirect(url_for("main.orders_ui"))
         try:
             train = Train.query.get(order.train_no)
@@ -320,8 +332,16 @@ def delete_order(order_id):
             db.session.rollback()
             current_app.logger.exception("delete_order failed: %s", exc)
             flash("退票失败，请稍后重试", "error")
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"success": False, "message": "退票失败，请稍后重试"})
     else:
         flash("订单不存在或无权限", "error")
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "message": "订单不存在或无权限"})
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True})
+
     return redirect(url_for("main.orders_ui"))
 
 
@@ -495,12 +515,24 @@ def admin_manage_train():
 
     if action == "delete":
         if Order.query.filter(
-            Order.train_no == train_no, Order.status.in_(["已出票", "已改签"])
+            Order.train_no == train_no,
+            Order.status.in_(["已出票", "已改签"]),
+            Order.dep_time > datetime.now(),
         ).first():
             flash("删除失败：该车次存在有效订单", "error")
         else:
             try:
-                Train.query.filter_by(train_no=train_no).delete()
+                train = Train.query.get(train_no)
+                if not train:
+                    flash("车次不存在", "error")
+                    return redirect(url_for("main.trains_page"))
+
+                # 清理该车次全部历史订单，避免外键约束阻止删除车次。
+                historical_orders = Order.query.filter_by(train_no=train_no).all()
+                for order in historical_orders:
+                    db.session.delete(order)
+
+                db.session.delete(train)
                 db.session.commit()
                 flash(f"车次 {train_no} 已删除", "success")
             except Exception as exc:

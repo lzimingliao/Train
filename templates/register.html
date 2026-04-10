@@ -278,7 +278,6 @@
         <div class="form-section">
             <div class="register-title">
                 <h3>用户注册</h3>
-                <p>填写信息后即可登录系统</p>
             </div>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -298,8 +297,8 @@
             <form action="/register" method="POST" id="registerForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div class="form-floating">
-                    <input type="text" class="form-control" id="username" name="username" placeholder="登录用户名" required autocomplete="username">
-                    <label for="username">登录用户名<span class="required">*</span></label>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="设置用户名" required autocomplete="username">
+                    <label for="username">设置用户名<span class="required">*</span></label>
                 </div>
 
                 <div class="form-floating mb-0">

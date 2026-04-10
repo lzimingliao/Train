@@ -822,13 +822,15 @@
 
         .seat-selector {
             display: flex;
-            gap: 8px;
+            gap: 4px;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: wrap; /* allow wrap if container is too small, avoids breaking outside */
+            justify-content: flex-start;
         }
 
         .seat-selector label {
             cursor: pointer;
+            margin: 0;
         }
 
         .seat-selector input {
@@ -837,18 +839,18 @@
 
         .seat-box {
             display: inline-block;
-            min-width: 36px;
-            height: 36px;
-            line-height: 36px;
+            min-width: 28px;
+            height: 28px;
+            line-height: 26px;
             text-align: center;
             border: 1px solid #d1d5db;
             border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
+            font-size: 13px;
+            font-weight: 600;
             color: #4b5563;
             transition: all 0.2s;
             background: white;
-            padding: 0 10px;
+            padding: 0 4px;
         }
 
         .seat-selector input:checked + .seat-box {
@@ -858,10 +860,10 @@
         }
 
         .seat-aisle {
-            width: 16px;
-            height: 36px;
+            width: 8px;
+            height: 28px;
             background: repeating-linear-gradient(45deg, #f3f4f6, #f3f4f6 2px, #ffffff 2px, #ffffff 4px);
-            border-radius: 4px;
+            border-radius: 3px;
         }
 
         .seat-note {
@@ -937,7 +939,7 @@
         {% endif %}
 
         {% if session.get('role') == 'admin' %}
-        <a href="/" class="nav-item {% if active_tab == 'book' or active_tab == 'query' %}active{% endif %}"><i class="fas fa-search"></i> 票务查询</a>
+        <a href="/" class="nav-item {% if active_tab == 'book' or active_tab == 'query' %}active{% endif %}"><i class="fas fa-search"></i> 车票查询与订票</a>
         <a href="/trains" class="nav-item {% if active_tab == 'trains' %}active{% endif %}"><i class="fas fa-subway"></i> 车次管理</a>
         <a href="/users" class="nav-item {% if active_tab == 'users' %}active{% endif %}"><i class="fas fa-users"></i> 用户管理</a>
         {% endif %}
@@ -986,6 +988,114 @@
         var d = String(now.getDate()).padStart(2, '0');
         target.textContent = y + '-' + m + '-' + d;
     })();
+
+    // 绑定退票弹窗与改签模块的AJAX交互
+    document.addEventListener('DOMContentLoaded', () => {
+        const csrfToken = {{ csrf_token|tojson }};
+
+        // 退票逻辑
+        document.querySelectorAll('.action-refund').forEach(btn => {
+            btn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                if (!confirm('确认退票？')) return;
+
+                const orderId = this.dataset.orderId;
+                const card = document.getElementById(`order-card-${orderId}`);
+
+                try {
+                    const response = await fetch(`/delete_order/${orderId}`, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams({
+                            csrf_token: csrfToken
+                        }).toString()
+                    });
+
+                    let data;
+                    try {
+                        data = await response.json();
+                    } catch (parseErr) {
+                        data = { success: false, message: '服务器返回格式异常' };
+                    }
+
+                    if (!response.ok) {
+                        alert(data.message || '退票请求失败');
+                        return;
+                    }
+
+                    if (data.success) {
+                        // UI更新
+                        document.getElementById(`status-${orderId}`).innerHTML = '<span class="badge badge-gray">已退票</span>';
+                        document.getElementById(`actions-${orderId}`).innerHTML = '<span style="font-size:13px; color:#9ca3af;">-</span>';
+                        card.style.opacity = '0.6';
+                        card.style.filter = 'grayscale(100%)';
+                    } else {
+                        alert(data.message || '退票失败');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('请求退票时发生错误');
+                }
+            });
+        });
+
+        // 呼出改签模态框逻辑
+        const modal = document.getElementById('reschedule-modal-backdrop');
+        if(modal) {
+            document.querySelectorAll('.action-reschedule').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    const { orderId, depStation, arrStation, date } = this.dataset;
+
+                    document.getElementById('reschedule-modal-order-id').innerText = orderId;
+                    document.getElementById('form-reschedule-order-id').value = orderId;
+                    document.getElementById('reschedule-start').value = depStation;
+                    document.getElementById('reschedule-end').value = arrStation;
+                    document.getElementById('reschedule-date').value = date;
+
+                    modal.style.display = 'flex';
+                });
+            });
+
+            document.getElementById('close-reschedule-modal').addEventListener('click', () => {
+                modal.style.display = 'none';
+                document.getElementById('reschedule-results-content').innerHTML = `
+                    <div style="text-align: center; color: var(--text-muted); padding: 40px 0;">
+                        <i class="fas fa-train fa-3x" style="color: #e5e7eb; margin-bottom: 12px;"></i>
+                        <p>请输入条件以查询可用车次</p>
+                    </div>
+                `;
+            });
+
+            // 模态框搜索逻辑
+            document.getElementById('btn-reschedule-search').addEventListener('click', async () => {
+                const form = document.getElementById('reschedule-search-form');
+                const params = new URLSearchParams(new FormData(form));
+                const loading = document.getElementById('reschedule-loading');
+                const content = document.getElementById('reschedule-results-content');
+                // required fields validation
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
+                loading.style.display = 'flex';
+                try {
+                    const response = await fetch(`/do_query?${params.toString()}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const html = await response.text();
+                    content.innerHTML = html;
+                } catch (error) {
+                    content.innerHTML = `<div style="color: red; text-align: center; padding: 20px;">查询失败: ${error}</div>`;
+                } finally {
+                    loading.style.display = 'none';
+                }
+            });
+        }
+    });
 </script>
 
 </body>
