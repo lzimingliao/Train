@@ -26,7 +26,12 @@ class User(db.Model):
 
 
 class Train(db.Model):
-    train_no = db.Column(db.String(20), primary_key=True)
+    train_id = db.Column(
+        db.String(50),
+        primary_key=True,
+        default=lambda: "TRN" + uuid.uuid4().hex[:12].upper(),
+    )
+    train_no = db.Column(db.String(20), nullable=False)
     dep_station = db.Column(db.String(50), nullable=False)
     arr_station = db.Column(db.String(50), nullable=False)
     dep_time = db.Column(db.DateTime, nullable=False)
@@ -37,6 +42,8 @@ class Train(db.Model):
     carriage_count = db.Column(db.Integer, default=5, nullable=False)
     seat_map = db.Column(db.Text, nullable=False)
 
+    __table_args__ = (db.UniqueConstraint("train_no", "dep_time"),)
+
 
 class Order(db.Model):
     order_id = db.Column(
@@ -45,7 +52,8 @@ class Order(db.Model):
         default=lambda: "ORD" + uuid.uuid4().hex[:12].upper(),
     )
     user_id = db.Column(db.String(50), db.ForeignKey("user.user_id"), nullable=False)
-    train_no = db.Column(db.String(20), db.ForeignKey("train.train_no"), nullable=False)
+    train_id = db.Column(db.String(50), db.ForeignKey("train.train_id"), nullable=False)
+    train_no = db.Column(db.String(20), nullable=False)
     dep_station = db.Column(db.String(50), nullable=False)
     arr_station = db.Column(db.String(50), nullable=False)
     dep_time = db.Column(db.DateTime, nullable=False)

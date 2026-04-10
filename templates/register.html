@@ -277,7 +277,7 @@
 
         <div class="form-section">
             <div class="register-title">
-                <h3>用户注册</h3>
+                <h3>创建账号</h3>
             </div>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -297,13 +297,13 @@
             <form action="/register" method="POST" id="registerForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div class="form-floating">
-                    <input type="text" class="form-control" id="username" name="username" placeholder="设置用户名" required autocomplete="username">
-                    <label for="username">设置用户名<span class="required">*</span></label>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="请设置账号名" required autocomplete="username">
+                    <label for="username">账号名<span class="required">*</span></label>
                 </div>
 
                 <div class="form-floating mb-0">
-                    <input type="password" class="form-control" id="password" name="password" placeholder="设置密码" required autocomplete="new-password" oninput="checkPasswordStrength()">
-                    <label for="password">设置密码<span class="required">*</span></label>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="请设置登录密码" required autocomplete="new-password" oninput="checkPasswordStrength()">
+                    <label for="password">登录密码<span class="required">*</span></label>
                     <button type="button" class="password-toggle" onclick="togglePasswordVisibility()">
                         <i class="fas fa-eye-slash" id="password-icon"></i>
                     </button>
@@ -316,26 +316,26 @@
 
                 <div class="form-row mt-1">
                     <div class="form-floating">
-                        <input type="text" class="form-control" id="name" name="name" placeholder="真实姓名" required autocomplete="name">
-                        <label for="name">真实姓名<span class="required">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" placeholder="请输入姓名" required autocomplete="name">
+                        <label for="name">姓名<span class="required">*</span></label>
                     </div>
 
                     <div class="form-floating">
-                        <input type="tel" class="form-control" id="phone" name="phone" placeholder="手机号码" pattern="^1[3-9]\d{9}$" maxlength="11" title="请输入11位有效手机号码" autocomplete="tel-national">
+                        <input type="tel" class="form-control" id="phone" name="phone" placeholder="请输入手机号" pattern="^1[3-9]\d{9}$" maxlength="11" title="请输入11位有效手机号码" autocomplete="tel-national">
                         <label for="phone">手机号码（选填）</label>
                     </div>
                 </div>
 
                 <div class="form-floating">
-                    <input type="text" class="form-control" id="id_num" name="id_num" placeholder="居民身份证号" required pattern="^\d{17}[\dXx]$" maxlength="18" title="请输入18位有效身份证号码，最后一位可为X" autocomplete="off">
+                    <input type="text" class="form-control" id="id_num" name="id_num" placeholder="请输入身份证号" required pattern="^\d{17}[\dXx]$" maxlength="18" title="请输入18位有效身份证号码，最后一位可为X" autocomplete="off">
                     <label for="id_num">中国大陆居民身份证<span class="required">*</span></label>
                 </div>
 
-                <button type="submit" class="btn btn-register w-100" id="submitBtn" disabled>注册</button>
+                <button type="submit" class="btn btn-register w-100" id="submitBtn" disabled>完成注册</button>
             </form>
 
             <div class="login-hint">
-                已有账号？ <a href="/login">去登录</a>
+                已有账号？ <a href="/login">立即登录</a>
             </div>
         </div>
     </div>
@@ -385,11 +385,11 @@
                 strengthBar.style.width = '34%';
                 strengthBar.style.backgroundColor = 'var(--error-color)';
                 if (password.length < 6) {
-                    strengthText.innerText = '弱：密码长度必须至少为6位';
+                    strengthText.innerText = '强度较弱：密码长度至少为6位';
                 } else if (isWeakCommon) {
-                    strengthText.innerText = '弱：请避免常见密码';
+                    strengthText.innerText = '强度较弱：请避免使用常见密码';
                 } else {
-                    strengthText.innerText = '弱：至少包含字母、数字、符号中的两类';
+                    strengthText.innerText = '强度较弱：请至少包含字母、数字、符号中的两类';
                 }
                 strengthText.style.color = 'var(--error-color)';
                 submitBtn.disabled = true;
@@ -399,12 +399,12 @@
             if (typesCount === 2) {
                 strengthBar.style.width = '68%';
                 strengthBar.style.backgroundColor = 'var(--warning-color)';
-                strengthText.innerText = '中：可用';
+                strengthText.innerText = '强度中等：可使用';
                 strengthText.style.color = 'var(--warning-color)';
             } else {
                 strengthBar.style.width = '100%';
                 strengthBar.style.backgroundColor = 'var(--success-color)';
-                strengthText.innerText = '强：推荐';
+                strengthText.innerText = '强度较高：推荐';
                 strengthText.style.color = 'var(--success-color)';
             }
 

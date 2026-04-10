@@ -933,7 +933,7 @@
     <div class="logo-area"><i class="fas fa-train"></i> 火车票管理系统</div>
     <div class="nav-list">
         {% if session.get('role') == 'user' %}
-        <a href="/" class="nav-item {% if active_tab == 'book' %}active{% endif %}"><i class="fas fa-search"></i> 车票预订</a>
+        <a href="/" class="nav-item {% if active_tab == 'book' %}active{% endif %}"><i class="fas fa-search"></i> 查询与购票</a>
         <a href="/orders_ui" class="nav-item {% if active_tab == 'orders' %}active{% endif %}"><i class="fas fa-receipt"></i> 订单中心</a>
         <a href="/profile" class="nav-item {% if active_tab == 'profile' %}active{% endif %}"><i class="fas fa-user"></i> 个人信息</a>
         {% endif %}
@@ -967,7 +967,7 @@
             {% endif %}
         </h2>
         <div class="header-meta">
-            <span class="meta-pill"><i class="fas fa-user-shield"></i> {{ '管理员' if session.get('role') == 'admin' else '用户' }}</span>
+            <span class="meta-pill"><i class="fas fa-user-shield"></i> {{ '管理员' if session.get('role') == 'admin' else '旅客' }}</span>
             <span class="meta-pill"><i class="fas fa-calendar-alt"></i> <span id="header-date-text">运营中</span></span>
         </div>
     </header>
@@ -997,7 +997,7 @@
         document.querySelectorAll('.action-refund').forEach(btn => {
             btn.addEventListener('click', async function(e) {
                 e.preventDefault();
-                if (!confirm('确认退票？')) return;
+                if (!confirm('确认提交退票申请？')) return;
 
                 const orderId = this.dataset.orderId;
                 const card = document.getElementById(`order-card-${orderId}`);
@@ -1018,11 +1018,11 @@
                     try {
                         data = await response.json();
                     } catch (parseErr) {
-                        data = { success: false, message: '服务器返回格式异常' };
+                        data = { success: false, message: '系统返回异常，请稍后重试' };
                     }
 
                     if (!response.ok) {
-                        alert(data.message || '退票请求失败');
+                        alert(data.message || '退票请求未成功');
                         return;
                     }
 
@@ -1033,11 +1033,11 @@
                         card.style.opacity = '0.6';
                         card.style.filter = 'grayscale(100%)';
                     } else {
-                        alert(data.message || '退票失败');
+                        alert(data.message || '退票未成功，请稍后重试');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('请求退票时发生错误');
+                    alert('退票请求发送失败，请检查网络后重试');
                 }
             });
         });
@@ -1064,7 +1064,7 @@
                 document.getElementById('reschedule-results-content').innerHTML = `
                     <div style="text-align: center; color: var(--text-muted); padding: 40px 0;">
                         <i class="fas fa-train fa-3x" style="color: #e5e7eb; margin-bottom: 12px;"></i>
-                        <p>请输入条件以查询可用车次</p>
+                        <p>请设置改签条件后查询可改签车次</p>
                     </div>
                 `;
             });
@@ -1089,7 +1089,7 @@
                     const html = await response.text();
                     content.innerHTML = html;
                 } catch (error) {
-                    content.innerHTML = `<div style="color: red; text-align: center; padding: 20px;">查询失败: ${error}</div>`;
+                    content.innerHTML = `<div style="color: red; text-align: center; padding: 20px;">查询未成功，请稍后重试：${error}</div>`;
                 } finally {
                     loading.style.display = 'none';
                 }

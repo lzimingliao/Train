@@ -233,27 +233,27 @@
             <form action="/login" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div class="custom-tabs">
-                    <div class="tab-item active">统一登录</div>
+                    <div class="tab-item active">账号登录</div>
                 </div>
 
                 <div class="form-floating mb-4">
-                    <input type="text" class="form-control" id="username" name="username" placeholder="用户名" required autocomplete="username">
-                    <label for="username" id="username_label">用户名</label>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="请输入账号名" required autocomplete="username">
+                    <label for="username" id="username_label">账号名</label>
                 </div>
 
                 <div class="form-floating mb-4">
-                    <input type="password" class="form-control" id="password" name="password" placeholder="密码" required autocomplete="current-password">
-                    <label for="password">密码</label>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="请输入登录密码" required autocomplete="current-password">
+                    <label for="password">登录密码</label>
                     <button type="button" class="password-toggle" onclick="togglePasswordVisibility()">
                         <i class="fas fa-eye-slash" id="password-icon"></i>
                     </button>
                 </div>
 
-                <button type="submit" class="btn btn-login w-100">登录</button>
+                <button type="submit" class="btn btn-login w-100">立即登录</button>
             </form>
 
             <div class="register-hint" id="register_area">
-                没有账号？ <a href="/register">去注册</a>
+                还没有账号？ <a href="/register">立即注册</a>
             </div>
         </div>
     </div>

@@ -1,17 +1,17 @@
 {% if active_tab == 'users' %}
 <div class="panel-card">
-    <div class="card-header"><i class="fas fa-users"></i>用户列表</div>
+    <div class="card-header"><i class="fas fa-users"></i>用户管理</div>
 
     <div class="stat-belt">
         <div class="stat-chip"><div class="k">用户总数</div><div class="v">{{ users|length }} 人</div></div>
-        <div class="stat-chip"><div class="k">管理员</div><div class="v">{{ users|selectattr('role', 'equalto', 'admin')|list|length }} 人</div></div>
-        <div class="stat-chip"><div class="k">普通用户</div><div class="v">{{ users|selectattr('role', 'equalto', 'user')|list|length }} 人</div></div>
+        <div class="stat-chip"><div class="k">管理员账号</div><div class="v">{{ users|selectattr('role', 'equalto', 'admin')|list|length }} 人</div></div>
+        <div class="stat-chip"><div class="k">旅客账号</div><div class="v">{{ users|selectattr('role', 'equalto', 'user')|list|length }} 人</div></div>
     </div>
 
     {% if users and users|length > 0 %}
     <div class="table-shell">
         <table>
-            <tr><th>身份证号</th><th>用户名、真实姓名</th><th>手机号</th><th>角色</th><th>操作</th></tr>
+            <tr><th>身份证号</th><th>用户名与姓名</th><th>手机号</th><th>角色</th><th>操作</th></tr>
             {% for u in users %}
             <tr>
                 {% set form_id = 'user-form-' ~ loop.index %}
@@ -23,7 +23,7 @@
                     </div>
                 </td>
                 <td><input type="text" name="phone" form="{{ form_id }}" value="{{ u.phone }}" placeholder="手机号" style="padding:6px; font-size:13px; max-width: 120px;"></td>
-                <td><span class="badge {% if u.role=='admin' %}badge-red{% else %}badge-blue{% endif %}">{{ u.role }}</span></td>
+                <td><span class="badge {% if u.role=='admin' %}badge-red{% else %}badge-blue{% endif %}">{{ '管理员' if u.role == 'admin' else '旅客' }}</span></td>
                 <td>
                     <form id="{{ form_id }}" action="/admin_manage_user" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -31,9 +31,9 @@
                         <div class="table-actions">
                             <button type="submit" name="action" value="edit" class="btn btn-outline btn-sm" title="保存修改"><i class="fas fa-save"></i></button>
                             {% if u.role == 'admin' %}
-                            <button type="button" class="btn btn-outline btn-sm" style="color:#94a3b8; border-color:#d5dde8; cursor:not-allowed;" title="管理员账号不可删除" disabled><i class="fas fa-lock"></i></button>
+                            <button type="button" class="btn btn-outline btn-sm" style="color:#94a3b8; border-color:#d5dde8; cursor:not-allowed;" title="管理员账号不支持删除" disabled><i class="fas fa-lock"></i></button>
                             {% else %}
-                            <button type="submit" name="action" value="delete" class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认删除该用户？')" title="删除用户"><i class="fas fa-trash"></i></button>
+                            <button type="submit" name="action" value="delete" class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认删除该用户账号吗？')" title="删除用户"><i class="fas fa-trash"></i></button>
                             {% endif %}
                         </div>
                     </form>
@@ -45,7 +45,7 @@
     {% else %}
     {% set empty_icon = 'fa-users-slash' %}
     {% set empty_message = '暂无用户数据' %}
-    {% set empty_hint = '请先通过注册功能创建普通用户。' %}
+    {% set empty_hint = '可先通过注册页面创建旅客账号。' %}
     {% include 'dashboard/sections/empty_state.html' %}
     {% endif %}
 </div>

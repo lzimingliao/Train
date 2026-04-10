@@ -6,7 +6,7 @@
 <div class="panel-card">
     <div class="card-header"><i class="fas fa-history"></i> 我的订单</div>
 {% endif %}
-    <p class="section-note">支持直接退票或改签，发车后不可操作。</p>
+    <p class="section-note">支持在线退票和改签。车次发车后，订单不可继续办理。</p>
     {% if orders and orders|length > 0 %}
     <div class="order-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px;">
         {% for order in orders %}
@@ -51,10 +51,10 @@
                 </div>
                 <div class="oc-actions" id="actions-{{ order.order_id }}">
                     {% if (order.status == '已出票' or order.status == '已改签') and order.dep_time > now_time %}
-                        <button class="btn btn-outline btn-sm action-refund" data-order-id="{{ order.order_id }}" style="color:var(--danger-color); border-color:#fca5a5; padding: 4px 12px; font-size: 13px;">退票</button>
-                        <button class="btn btn-primary btn-sm action-reschedule" data-order-id="{{ order.order_id }}" data-dep-station="{{ order.train.dep_station }}" data-arr-station="{{ order.train.arr_station }}" data-date="{{ order.dep_time.strftime('%Y-%m-%d') }}" style="padding: 4px 12px; font-size: 13px;">改签</button>
+                        <button class="btn btn-outline btn-sm action-refund" data-order-id="{{ order.order_id }}" style="color:var(--danger-color); border-color:#fca5a5; padding: 4px 12px; font-size: 13px;">申请退票</button>
+                        <button class="btn btn-primary btn-sm action-reschedule" data-order-id="{{ order.order_id }}" data-dep-station="{{ order.train.dep_station }}" data-arr-station="{{ order.train.arr_station }}" data-date="{{ order.dep_time.strftime('%Y-%m-%d') }}" style="padding: 4px 12px; font-size: 13px;">办理改签</button>
                     {% elif order.status == '已出票' or order.status == '已改签' %}
-                    <span style="font-size:13px; color:#9ca3af;">已过发车</span>
+                    <span style="font-size:13px; color:#9ca3af;">已发车</span>
                     {% else %}
                     <span style="font-size:13px; color:#9ca3af;">-</span>
                     {% endif %}
@@ -65,7 +65,7 @@
     </div>
     {% else %}
     {% set empty_icon = 'fa-receipt' %}
-    {% set empty_message = '暂无订单' %}
+    {% set empty_message = '暂无可展示订单' %}
     {% include 'dashboard/sections/empty_state.html' %}
     {% endif %}
 </div>

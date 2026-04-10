@@ -1,11 +1,11 @@
 {% if active_tab == 'book' or active_tab == 'query' %}
 <div class="panel-card">
     <div class="card-header"><i class="fas fa-filter"></i> 车票查询</div>
-    <p class="section-note">区间车次查询：按余票数量从多到少排序（余票相同则按出发时间升序）；车站车次查询：按发车时间从早到晚排序。</p>
+    <p class="section-note">支持按区间或车站查询。区间查询默认优先展示余票更充足的车次；车站查询按发车时间升序展示。</p>
 
     <div class="split-layout">
         <div class="sub-card">
-            <h4><i class="fas fa-route"></i> 区间车次查询</h4>
+            <h4><i class="fas fa-route"></i> 按区间查询</h4>
             <form action="/do_query" method="GET">
                 <input type="hidden" name="search_type" value="interval">
                 <input type="hidden" name="source_tab" value="{{ active_tab }}">
@@ -14,12 +14,12 @@
                     <div class="input-group"><label>出发站</label><input type="text" name="start_station" required placeholder="例如：重庆北"></div>
                     <div class="input-group"><label>到达站</label><input type="text" name="end_station" required placeholder="例如：成都东"></div>
                 </div>
-                <button class="btn btn-primary" style="width: 100%;"><i class="fas fa-search"></i> 查询</button>
+                <button class="btn btn-primary" style="width: 100%;"><i class="fas fa-search"></i> 立即查询</button>
             </form>
         </div>
 
         <div class="sub-card">
-            <h4><i class="fas fa-map-marker-alt"></i> 车站查询</h4>
+            <h4><i class="fas fa-map-marker-alt"></i> 按车站查询</h4>
             <form action="/do_query" method="GET">
                 <input type="hidden" name="search_type" value="station">
                 <input type="hidden" name="source_tab" value="{{ active_tab }}">
@@ -27,7 +27,7 @@
                     <div class="input-group"><label>日期</label><input type="date" name="date" required></div>
                     <div class="input-group"><label>车站</label><input type="text" name="station" placeholder="例如：重庆北" required></div>
                 </div>
-                <button class="btn btn-outline" style="width: 100%;"><i class="fas fa-list"></i> 查询</button>
+                <button class="btn btn-outline" style="width: 100%;"><i class="fas fa-list"></i> 立即查询</button>
             </form>
         </div>
     </div>
