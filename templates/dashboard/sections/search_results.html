@@ -1,7 +1,7 @@
 {% if search_results is defined and searched %}
     {% if search_results|length > 0 %}
     <div class="panel-card">
-        <div class="card-header"><i class="fas fa-table"></i> 查询结果</div>
+        <div class="card-header"><i class="fas fa-table"></i> {% if active_tab == 'orders' and reschedule_order_id %}改签候选车次{% else %}查询结果{% endif %}</div>
         <div class="stat-belt">
             <div class="stat-chip"><div class="k">结果总数</div><div class="v">{{ search_results|length }} 条</div></div>
             <div class="stat-chip"><div class="k">可订票车次</div><div class="v">{{ search_results|selectattr('rem_seats', 'gt', 0)|list|length }} 条</div></div>

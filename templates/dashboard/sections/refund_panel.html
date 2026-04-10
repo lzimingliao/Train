@@ -1,10 +1,16 @@
 {% if active_tab == 'orders' %}
+{% if embedded_orders %}
+<div class="sub-card">
+    <h4><i class="fas fa-history"></i> 我的订单</h4>
+{% else %}
 <div class="panel-card">
-    <div class="card-header"><i class="fas fa-history"></i> 订单与退票</div>
+    <div class="card-header"><i class="fas fa-history"></i> 我的订单</div>
+{% endif %}
+    <p class="section-note">支持直接退票或改签，发车后不可操作。</p>
     {% if orders and orders|length > 0 %}
     <div class="table-shell">
         <table>
-            <tr><th>订单号 / 时间</th><th>行程</th><th>票价与座位</th><th>状态</th><th>操作</th></tr>
+            <tr><th>订单号</th><th>行程</th><th>座位 / 票价</th><th>状态</th><th>操作</th></tr>
             {% for order in orders %}
             <tr>
                 <td>
@@ -17,8 +23,8 @@
                     <small style="color:#6b7280;">{{ order.train.dep_time.strftime('%m-%d %H:%M') }}</small>
                 </td>
                 <td>
-                    <div style="font-weight:600;">¥{{ order.price }}</div>
-                    <div style="font-size:13px; color:#6b7280; margin-top:2px;">座位: {{ order.seat_no }}</div>
+                    <div style="font-size:13px; color:#6b7280;">{{ order.seat_no }}</div>
+                    <div style="font-weight:600; margin-top:2px;">¥{{ order.price }}</div>
                 </td>
                 <td>
                     {% if order.status == '已退票' %}
@@ -31,10 +37,13 @@
                 </td>
                 <td>
                     {% if (order.status == '已出票' or order.status == '已改签') and order.dep_time > now_time %}
-                    <form action="/delete_order/{{ order.order_id }}" method="POST">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                        <button class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认退票？')">退票</button>
-                    </form>
+                    <div class="table-actions">
+                        <form action="/delete_order/{{ order.order_id }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button class="btn btn-outline btn-sm" style="color:var(--danger-color); border-color:#fca5a5;" onclick="return confirm('确认退票？')">退票</button>
+                        </form>
+                        <a href="/do_query?search_type=interval&source_tab=orders&reschedule_order_id={{ order.order_id }}&date={{ order.dep_time.strftime('%Y-%m-%d') }}&start_station={{ order.dep_station }}&end_station={{ order.arr_station }}" class="btn btn-outline btn-sm"><i class="fas fa-edit"></i> 改签</a>
+                    </div>
                     {% elif order.status == '已出票' or order.status == '已改签' %}
                     <span style="font-size:13px; color:#9ca3af;">已过发车</span>
                     {% else %}

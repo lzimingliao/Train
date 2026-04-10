@@ -4,13 +4,26 @@
     {% include 'dashboard/sections/ticket_receipt.html' %}
     {% include 'dashboard/sections/query_panel.html' %}
     {% if active_tab == 'orders' %}
-    <div class="orders-center-layout">
-        <div class="orders-left">
-            {% include 'dashboard/sections/refund_panel.html' %}
+    <div class="panel-card">
+        <div class="card-header"><i class="fas fa-layer-group"></i> 订单中心</div>
+        <div class="orders-hub-head">
+            <div class="orders-hub-title">一屏完成订单处理</div>
+            <div class="orders-hub-sub">在左侧订单中直接退票或发起改签，右侧显示改签进度。</div>
+            <div class="orders-flow">
+                <span class="flow-step"><i class="fas fa-list"></i> 选订单</span>
+                <span class="flow-step"><i class="fas fa-edit"></i> 改签/退票</span>
+                <span class="flow-step"><i class="fas fa-check-circle"></i> 完成</span>
+            </div>
         </div>
-        <div class="orders-right">
-            {% include 'dashboard/sections/reschedule_panel.html' %}
-            {% include 'dashboard/sections/search_results.html' %}
+        <div class="orders-center-layout">
+            <div class="orders-left">
+                {% set embedded_orders = true %}
+                {% include 'dashboard/sections/refund_panel.html' %}
+                {% include 'dashboard/sections/search_results.html' %}
+            </div>
+            <div class="orders-right">
+                {% include 'dashboard/sections/reschedule_panel.html' %}
+            </div>
         </div>
     </div>
     {% else %}

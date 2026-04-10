@@ -1,50 +1,32 @@
 {% if active_tab == 'orders' %}
 {% if reschedule_order_id %}
-<div class="panel-card" style="border-color: #93c5fd; background: #eff6ff;">
-    <div class="card-header" style="color: #1e40af;"><i class="fas fa-info-circle"></i> 改签订单：{{ reschedule_order_id }}</div>
-    <form action="/do_query" method="GET" class="form-row" style="margin-bottom:0;">
+<div class="sub-card sub-card-accent">
+    <h4><i class="fas fa-sync-alt"></i> 改签进行中</h4>
+    <p class="section-note">当前订单：<strong>{{ reschedule_order_id }}</strong></p>
+    <div class="compact-hint">
+        <p><i class="fas fa-angle-right"></i> 在左侧“改签候选车次”中选择车次和座位后确认改签。</p>
+        <p><i class="fas fa-angle-right"></i> 如需重新筛选，可修改日期和站点后再次查询。</p>
+    </div>
+    <form action="/do_query" method="GET" style="margin-top: 12px;">
         <input type="hidden" name="search_type" value="interval">
         <input type="hidden" name="source_tab" value="orders">
         <input type="hidden" name="reschedule_order_id" value="{{ reschedule_order_id }}">
-        <div class="input-group"><label>日期</label><input type="date" name="date" required></div>
-        <div class="input-group"><label>出发站</label><input type="text" name="start_station" required></div>
-        <div class="input-group"><label>到达站</label><input type="text" name="end_station" required></div>
-        <button class="btn btn-primary" style="align-self: flex-end;"><i class="fas fa-search"></i> 查询可改签车次</button>
+        <div class="input-group" style="margin-bottom: 8px;"><label>日期</label><input type="date" name="date" required value="{{ request.args.get('date', '') }}"></div>
+        <div class="input-group" style="margin-bottom: 8px;"><label>出发站</label><input type="text" name="start_station" required value="{{ request.args.get('start_station', '') }}"></div>
+        <div class="input-group"><label>到达站</label><input type="text" name="end_station" required value="{{ request.args.get('end_station', '') }}"></div>
+        <button class="btn btn-outline" style="width: 100%; margin-top: 10px;"><i class="fas fa-search"></i> 重新筛选车次</button>
     </form>
+    <a href="/orders_ui" class="btn btn-primary" style="width: 100%; margin-top: 10px;"><i class="fas fa-times-circle"></i> 退出改签模式</a>
 </div>
 {% else %}
-<div class="panel-card">
-    <div class="card-header"><i class="fas fa-list-ul"></i> 可改签订单</div>
-    <p class="section-note">仅展示未发车订单。改签规则：同日同区间，或同车次改期。</p>
-    {% if active_orders and active_orders|length > 0 %}
-    <div class="table-shell">
-        <table>
-            <tr><th>订单号</th><th>车次与行程</th><th>发车时间</th><th>座位</th><th>操作</th></tr>
-            {% for order in active_orders %}
-            <tr>
-                <td style="font-family: monospace; color: #4b5563;">{{ order.order_id }}</td>
-                <td>
-                    <strong>{{ order.train_no }}</strong><br>
-                    <span style="font-size:13px; color:#6b7280;">{{ order.train.dep_station }} ➔ {{ order.train.arr_station }}</span>
-                </td>
-                <td style="font-weight: 500;">{{ order.train.dep_time.strftime('%Y-%m-%d %H:%M') }}</td>
-                <td><span class="badge badge-blue">{{ order.seat_no }}</span></td>
-                <td>
-                    {% if order.dep_time > now_time %}
-                    <a href="/do_query?search_type=interval&source_tab=orders&reschedule_order_id={{ order.order_id }}&date={{ order.train.dep_time.strftime('%Y-%m-%d') }}&start_station={{ order.train.dep_station }}&end_station={{ order.train.arr_station }}" class="btn btn-outline btn-sm"><i class="fas fa-edit"></i> 改签</a>
-                    {% else %}
-                    <span style="font-size:13px; color:#9ca3af;">已过发车</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
+<div class="sub-card">
+    <h4><i class="fas fa-list-ul"></i> 改签入口</h4>
+    <p class="section-note">在左侧订单列表点击“改签”即可进入候选车次选择。</p>
+    <div class="compact-hint">
+        <p><i class="fas fa-circle"></i> 仅支持未发车订单</p>
+        <p><i class="fas fa-circle"></i> 推荐先看同区间同日期车次</p>
+        <p><i class="fas fa-circle"></i> 目标车次需有余票</p>
     </div>
-    {% else %}
-    {% set empty_icon = 'fa-ticket-alt' %}
-    {% set empty_message = '暂无可改签订单' %}
-    {% include 'dashboard/sections/empty_state.html' %}
-    {% endif %}
 </div>
 {% endif %}
 {% endif %}
