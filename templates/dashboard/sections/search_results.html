@@ -13,6 +13,7 @@
                 <tr><th style="padding: 16px;">车次</th><th>出发站 / 到达站</th><th>出发时间 / 到达时间</th><th>票价</th><th>余票</th><th style="padding: 16px; min-width: 260px;">操作</th></tr>
                 {% for t in search_results %}
                 {% set departed = t.dep_time <= now_time %}
+                {% set available = t.interval_available if t.interval_available is defined else t.rem_seats %}
                 <tr>
                     <td><strong style="font-size:18px;">{{ t.train_no }}</strong></td>
                     <td>
@@ -25,18 +26,31 @@
                     </td>
                     <td style="color: var(--danger-color); font-weight: 600;">¥{{ t.price }}</td>
                     <td>
-                        <span class="badge {% if t.rem_seats>0 %}badge-green{% else %}badge-red{% endif %}">余票: {{ t.rem_seats }}</span>
+                        <span class="badge {% if available>0 %}badge-green{% else %}badge-red{% endif %}">余票: {{ available }}</span>
                     </td>
                     <td>
                         {% if departed %}
                             <span class="badge badge-gray">已发车</span>
-                        {% elif t.rem_seats > 0 %}
+                        {% elif available > 0 %}
                             {% if active_tab == 'book' %}
                                 <form action="/book_ticket" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                     <input type="hidden" name="train_id" value="{{ t.train_id }}">
                                     <input type="hidden" name="train_no" value="{{ t.train_no }}">
                                     <input type="hidden" name="dep_time" value="{{ t.dep_time.strftime('%Y-%m-%d %H:%M:%S') }}">
+                                    {% set stations = t.route_stations if t.route_stations is defined else [t.dep_station, t.arr_station] %}
+                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                                        <select name="board_stop" required>
+                                            {% for s in stations %}
+                                            <option value="{{ s }}" {% if t.query_start_station is defined and s == t.query_start_station %}selected{% endif %}>{{ s }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <select name="alight_stop" required>
+                                            {% for s in stations %}
+                                            <option value="{{ s }}" {% if t.query_end_station is defined and s == t.query_end_station %}selected{% endif %}>{{ s }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
                                     {% include 'dashboard/sections/seat_selector.html' %}
                                     <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> 立即购票</button>
                                 </form>
@@ -52,7 +66,17 @@
                                 <span class="badge badge-gray">仅查看</span>
                             {% endif %}
                         {% else %}
+                            {% if active_tab == 'book' and t.query_start_station is defined and t.query_end_station is defined %}
+                            <form action="/join_waitlist" method="POST" style="display:flex; flex-direction:column; gap:8px;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <input type="hidden" name="train_id" value="{{ t.train_id }}">
+                                <input type="hidden" name="start_station" value="{{ t.query_start_station }}">
+                                <input type="hidden" name="end_station" value="{{ t.query_end_station }}">
+                                <button type="submit" class="btn btn-outline btn-sm"><i class="fas fa-hourglass-half"></i> 加入候补</button>
+                            </form>
+                            {% else %}
                             <span class="badge badge-gray">余票不足</span>
+                            {% endif %}
                         {% endif %}
                     </td>
                 </tr>
@@ -61,6 +85,43 @@
         </div>
     </div>
     {% else %}
+    {% if transfer_plans is defined and transfer_plans|length > 0 %}
+    <div class="panel-card">
+        <div class="card-header"><i class="fas fa-random"></i> 推荐中转方案（最多1次中转）</div>
+        <div class="table-shell" style="border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); overflow-x: auto;">
+            <table style="width: 100%; min-width: 900px;">
+                <tr><th>方案</th><th>第一程</th><th>换乘站</th><th>第二程</th><th>总耗时</th><th>换乘等待</th><th>操作</th></tr>
+                {% for p in transfer_plans %}
+                <tr>
+                    <td>方案 {{ loop.index }}</td>
+                    <td>{{ p.first_train.train_no }}（{{ p.start_station }} -> {{ p.transfer_station }}）</td>
+                    <td>{{ p.transfer_station }}</td>
+                    <td>{{ p.second_train.train_no }}（{{ p.transfer_station }} -> {{ p.end_station }}）</td>
+                    <td>{{ p.total_minutes }} 分钟</td>
+                    <td>{{ p.transfer_wait_minutes }} 分钟</td>
+                    <td>
+                        {% if active_tab == 'book' %}
+                        <form action="/book_transfer" method="POST" style="display:flex; flex-direction:column; gap:8px; min-width: 220px;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="first_train_id" value="{{ p.first_train.train_id }}">
+                            <input type="hidden" name="second_train_id" value="{{ p.second_train.train_id }}">
+                            <input type="hidden" name="start_station" value="{{ p.start_station }}">
+                            <input type="hidden" name="transfer_station" value="{{ p.transfer_station }}">
+                            <input type="hidden" name="end_station" value="{{ p.end_station }}">
+                            {% include 'dashboard/sections/seat_selector.html' %}
+                            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-check-double"></i> 一键预订两段</button>
+                        </form>
+                        {% else %}
+                        <span class="badge badge-gray">仅查看</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        <p class="section-note" style="margin-top:12px;">中转下单采用双段原子校验：任一段失败将整体回滚，不会生成半程订单。</p>
+    </div>
+    {% endif %}
     {% set empty_icon = 'fa-search' %}
     {% set empty_message = '未查询到符合条件的车次' %}
     {% set empty_hint = '建议检查出发日期、站名拼写，并尽量使用车站全称。' %}

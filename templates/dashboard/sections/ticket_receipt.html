@@ -6,12 +6,12 @@
             <span>订单号: {{ latest_order.order_id }}</span>
         </div>
         <div class="r-route">
-            <div class="r-station">{{ latest_order.train.dep_station }}</div>
+            <div class="r-station">{{ latest_order.board_stop or latest_order.train.dep_station }}</div>
             <div class="r-train">
                 <span>{{ latest_order.train_no }}</span>
                 <i class="fas fa-long-arrow-alt-right" style="margin-top: 4px; color: #cbd5e1;"></i>
             </div>
-            <div class="r-station">{{ latest_order.train.arr_station }}</div>
+            <div class="r-station">{{ latest_order.alight_stop or latest_order.train.arr_station }}</div>
         </div>
         <div class="r-details">
             <div class="r-item">

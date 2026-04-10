@@ -8,6 +8,7 @@
             <div class="input-group"><label>车次号</label><input type="text" name="train_no" placeholder="例如：C901" required></div>
             <div class="input-group"><label>出发站</label><input type="text" name="dep_station" required></div>
             <div class="input-group"><label>到达站</label><input type="text" name="arr_station" required></div>
+            <div class="input-group" style="grid-column: span 2;"><label>经停站序列（可选）</label><input type="text" name="stop_stations" placeholder="例如：重庆,遂宁,成都"></div>
             <div class="input-group"><label>出发时间</label><input type="datetime-local" name="dep_time" required></div>
             <div class="input-group"><label>到达时间</label><input type="datetime-local" name="arr_time" required></div>
             <div class="input-group"><label>票价 (¥)</label><input type="number" step="0.1" name="price" required></div>
@@ -23,7 +24,7 @@
     {% if trains and trains|length > 0 %}
     <div class="table-shell">
         <table>
-            <tr><th>车次号</th><th>出发站 / 到达站</th><th>出发时间 / 到达时间</th><th>票价与运力</th><th>编辑</th><th>删除</th></tr>
+            <tr><th>车次号</th><th>出发站 / 到达站</th><th>经停站序列</th><th>出发时间 / 到达时间</th><th>票价与运力</th><th>动态分配状态</th><th>编辑</th><th>删除</th></tr>
             {% for t in trains %}
             <tr>
                 <td>
@@ -35,6 +36,9 @@
                         <input type="text" name="dep_station" form="train-edit-{{ t.train_id }}" value="{{ t.dep_station }}" required>
                         <input type="text" name="arr_station" form="train-edit-{{ t.train_id }}" value="{{ t.arr_station }}" required>
                     </div>
+                </td>
+                <td>
+                    <input type="text" name="stop_stations" form="train-edit-{{ t.train_id }}" value="{{ (t.route_stations or [t.dep_station, t.arr_station])|join(',') }}" style="min-width: 220px;">
                 </td>
                 <td>
                     <div style="display:grid; grid-template-columns: 1fr; gap: 6px; min-width: 180px;">
@@ -49,6 +53,20 @@
                         <input type="number" name="total_seats" form="train-edit-{{ t.train_id }}" value="{{ t.total_seats }}" min="0" required style="grid-column: span 2;">
                     </div>
                     <div style="font-size:12px; color:#6b7280; margin-top:6px;">余 {{ t.rem_seats }} / 总 {{ t.total_seats }}</div>
+                </td>
+                <td>
+                    {% set rep = t.allocation_report %}
+                    <div style="font-size:12px; color:#374151; line-height:1.5; min-width: 220px;">
+                        <div>重平衡：{{ '已执行' if rep.rebalanced else '未执行' }}（{{ rep.rebalanced_at }}）</div>
+                        <div>候补总量：{{ rep.waitlist_count }}，覆盖区间：{{ rep.override_count }}</div>
+                        {% if rep.top_wait_intervals and rep.top_wait_intervals|length > 0 %}
+                        <div style="margin-top:4px; color:#6b7280;">热门候补：
+                            {% for pair in rep.top_wait_intervals %}
+                                {{ pair[0] }}({{ pair[1] }}){% if not loop.last %}，{% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
                 </td>
                 <td>
                     <form id="train-edit-{{ t.train_id }}" action="/admin_manage_train" method="POST">

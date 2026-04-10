@@ -3,11 +3,16 @@ import secrets
 from datetime import datetime
 
 from flask import Flask, abort, request, session
+from sqlalchemy import text
 
 from extensions import db
 from models import Train, User
 from routes import main_bp
-from utils import init_seats, user_cache
+from utils import (
+    ensure_route_template,
+    refresh_train_remaining_seats,
+    user_cache,
+)
 
 
 def create_app():
@@ -55,6 +60,56 @@ def create_app():
     with app.app_context():
         db.create_all()
 
+        def has_column(table_name, col_name):
+            rows = db.session.execute(
+                text(f'PRAGMA table_info("{table_name}")')
+            ).fetchall()
+            return any(row[1] == col_name for row in rows)
+
+        def apply_lightweight_migrations():
+            # SQLite compatibility migrations for existing local DB files.
+            if not has_column("train", "route_template_id"):
+                db.session.execute(
+                    text("ALTER TABLE train ADD COLUMN route_template_id VARCHAR(50)")
+                )
+            if not has_column("train", "dynamic_alloc_state"):
+                db.session.execute(
+                    text(
+                        "ALTER TABLE train ADD COLUMN dynamic_alloc_state TEXT DEFAULT '{}'"
+                    )
+                )
+            if not has_column("train", "dynamic_alloc_at"):
+                db.session.execute(
+                    text("ALTER TABLE train ADD COLUMN dynamic_alloc_at DATETIME")
+                )
+
+            if not has_column("order", "board_stop"):
+                db.session.execute(
+                    text('ALTER TABLE "order" ADD COLUMN board_stop VARCHAR(50)')
+                )
+            if not has_column("order", "alight_stop"):
+                db.session.execute(
+                    text('ALTER TABLE "order" ADD COLUMN alight_stop VARCHAR(50)')
+                )
+            if not has_column("order", "segment_span"):
+                db.session.execute(
+                    text('ALTER TABLE "order" ADD COLUMN segment_span TEXT')
+                )
+            if not has_column("order", "is_transfer_leg"):
+                db.session.execute(
+                    text(
+                        'ALTER TABLE "order" ADD COLUMN is_transfer_leg BOOLEAN DEFAULT 0'
+                    )
+                )
+            if not has_column("order", "bundle_id"):
+                db.session.execute(
+                    text('ALTER TABLE "order" ADD COLUMN bundle_id VARCHAR(50)')
+                )
+
+            db.session.commit()
+
+        apply_lightweight_migrations()
+
         if seed_enabled and not User.query.first():
             admin = User(
                 username="admin",
@@ -62,83 +117,17 @@ def create_app():
                 id_num="000000000000000000",
                 role="admin",
             )
-            admin.set_password("Admin123!")
+            admin.set_password("Admin123_")
             db.session.add(admin)
-
-            u1 = User(
-                username="testuser",
-                name="廖子明",
-                id_num="110105199001011234",
-                phone="15310627180",
-                role="user",
-            )
-            u1.set_password("Pass1234!")
-            db.session.add(u1)
-
-            t1 = Train(
-                train_no="C901",
-                dep_station="重庆",
-                arr_station="成都",
-                dep_time=datetime(2026, 4, 19, 13, 30),
-                arr_time=datetime(2026, 4, 19, 15, 10),
-                price=96.0,
-                total_seats=120,
-                rem_seats=120,
-                carriage_count=8,
-                seat_map=init_seats(120),
-            )
-            t2 = Train(
-                train_no="C901",
-                dep_station="重庆",
-                arr_station="成都",
-                dep_time=datetime(2026, 4, 20, 13, 30),
-                arr_time=datetime(2026, 4, 20, 15, 10),
-                price=96.0,
-                total_seats=120,
-                rem_seats=120,
-                carriage_count=8,
-                seat_map=init_seats(120),
-            )
-            t3 = Train(
-                train_no="G711",
-                dep_station="武汉",
-                arr_station="重庆",
-                dep_time=datetime(2026, 4, 19, 14, 0),
-                arr_time=datetime(2026, 4, 19, 18, 40),
-                price=238.0,
-                total_seats=100,
-                rem_seats=100,
-                carriage_count=8,
-                seat_map=init_seats(100),
-            )
-            t4 = Train(
-                train_no="G711",
-                dep_station="武汉",
-                arr_station="重庆",
-                dep_time=datetime(2026, 4, 20, 14, 0),
-                arr_time=datetime(2026, 4, 20, 18, 40),
-                price=238.0,
-                total_seats=100,
-                rem_seats=100,
-                carriage_count=8,
-                seat_map=init_seats(100),
-            )
-            t5 = Train(
-                train_no="D532",
-                dep_station="成都",
-                arr_station="武汉",
-                dep_time=datetime(2026, 4, 19, 15, 20),
-                arr_time=datetime(2026, 4, 19, 21, 5),
-                price=264.0,
-                total_seats=110,
-                rem_seats=110,
-                carriage_count=8,
-                seat_map=init_seats(110),
-            )
-
-            db.session.add_all([t1, t2, t3, t4, t5])
             db.session.commit()
-            print("初始化测试数据已插入！")
+            print("初始化完成：仅创建管理员账号。")
+
+        all_trains = Train.query.all()
+        for train in all_trains:
+            ensure_route_template(train, db)
+            refresh_train_remaining_seats(train)
+        db.session.commit()
+        print(f"初始化完成：已为 {len(all_trains)} 个班次补齐经停模板与区间配额。")
 
         all_users = User.query.all()
         user_cache.load_data(all_users)

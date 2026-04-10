@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 
 from flask import (
@@ -16,14 +16,26 @@ from flask import (
 from sqlalchemy.exc import OperationalError
 
 from extensions import db
-from models import Order, Train, User
+from models import Order, Train, TransferBundle, User
 from utils import (
-    allocate_seat_by_type,
+    allocate_reusable_seat,
     bubble_sort_by_time,
+    build_allocation_report,
+    enqueue_waitlist_if_needed,
+    estimate_station_time,
+    evaluate_dynamic_allocation_if_needed,
+    expand_interval_segments,
+    find_interval_trains,
     free_seat,
+    fulfill_waitlists_after_refund,
+    get_interval_available,
+    get_route_stations,
     init_seats,
+    is_valid_interval,
     perm_tree,
-    quick_sort_trains,
+    recommend_transfer_plans,
+    refresh_train_remaining_seats,
+    upsert_route_template,
     user_cache,
     validate_date_string,
     validate_id,
@@ -165,7 +177,12 @@ def logout():
 @main_bp.route("/")
 @permission_required("ticket_module", "query")
 def index():
-    return render_template("index.html", active_tab="book", search_results=[])
+    return render_template(
+        "index.html",
+        active_tab="book",
+        search_results=[],
+        transfer_plans=[],
+    )
 
 
 @main_bp.route("/do_query")
@@ -174,6 +191,7 @@ def do_query():
     search_type = request.args.get("search_type")
     date_str = request.args.get("date", "").strip()
     search_results = []
+    transfer_plans = []
 
     if not validate_date_string(date_str):
         flash("日期格式不正确，请按 YYYY-MM-DD 输入", "error")
@@ -193,12 +211,15 @@ def do_query():
         if start_station == end_station:
             flash("出发站与到达站不能相同", "error")
             return redirect(url_for("main.index"))
-        raw_trains = Train.query.filter(
-            db.func.date(Train.dep_time) == date_str,
-            Train.dep_station == start_station,
-            Train.arr_station == end_station,
-        ).all()
-        search_results = quick_sort_trains(raw_trains)
+        raw_trains = Train.query.filter(db.func.date(Train.dep_time) == date_str).all()
+        search_results = find_interval_trains(raw_trains, start_station, end_station)
+        if not search_results:
+            transfer_plans = recommend_transfer_plans(
+                raw_trains,
+                start_station,
+                end_station,
+                min_transfer_minutes=30,
+            )
 
     elif search_type == "station":
         station = request.args.get("station", "").strip()
@@ -208,14 +229,16 @@ def do_query():
                 "error",
             )
             return redirect(url_for("main.index"))
-        raw_trains = Train.query.filter(
-            db.func.date(Train.dep_time) == date_str,
-            db.or_(
-                Train.dep_station == station,
-                Train.arr_station == station,
-            ),
-        ).all()
-        search_results = bubble_sort_by_time(raw_trains)
+        raw_trains = Train.query.filter(db.func.date(Train.dep_time) == date_str).all()
+        station_matches = []
+        for train in raw_trains:
+            stations = get_route_stations(train)
+            if station in stations:
+                train.route_stations = stations
+                evaluate_dynamic_allocation_if_needed(train)
+                refresh_train_remaining_seats(train)
+                station_matches.append(train)
+        search_results = bubble_sort_by_time(station_matches)
     else:
         flash("查询参数无效，请重新选择查询方式", "error")
         return redirect(url_for("main.index"))
@@ -228,6 +251,7 @@ def do_query():
             "dashboard/sections/search_results.html",
             active_tab=source_tab,
             search_results=search_results,
+            transfer_plans=transfer_plans,
             reschedule_order_id=reschedule_order_id,
             searched=True,
         )
@@ -236,6 +260,7 @@ def do_query():
         "index.html",
         active_tab=source_tab,
         search_results=search_results,
+        transfer_plans=transfer_plans,
         reschedule_order_id=reschedule_order_id,
         searched=True,
     )
@@ -248,6 +273,8 @@ def book_ticket():
     train_no = request.form.get("train_no", "").strip().upper()
     dep_time_str = request.form.get("dep_time", "").strip()
     seat_type = request.form.get("seat_type")
+    board_stop = request.form.get("board_stop", "").strip()
+    alight_stop = request.form.get("alight_stop", "").strip()
     train = None
 
     if train_id:
@@ -264,15 +291,35 @@ def book_ticket():
                 pass
         train = q.order_by(Train.dep_time.asc()).first()
 
-    if not train or train.rem_seats <= 0:
-        flash("当前车次余票不足，请选择其他车次", "error")
+    if not train:
+        flash("未找到目标车次，请重新查询", "error")
         return redirect(url_for("main.index"))
 
     if is_departed(train.dep_time):
         flash("该车次已发车，暂不支持订票", "error")
         return redirect(url_for("main.index"))
 
-    new_seat_map, seat = allocate_seat_by_type(train.seat_map, seat_type)
+    evaluate_dynamic_allocation_if_needed(train)
+
+    if not board_stop:
+        board_stop = train.dep_station
+    if not alight_stop:
+        alight_stop = train.arr_station
+
+    if not is_valid_interval(train, board_stop, alight_stop):
+        flash("订票失败：请选择有效的经停区间", "error")
+        return redirect(url_for("main.index"))
+
+    if get_interval_available(train, board_stop, alight_stop) <= 0:
+        flash("当前区间无票，可加入候补", "error")
+        return redirect(url_for("main.index"))
+
+    new_seat_map, seat = allocate_reusable_seat(
+        train,
+        seat_type,
+        board_stop,
+        alight_stop,
+    )
     if not seat:
         flash("当前席别余票不足，请重新选择", "error")
         return redirect(url_for("main.index"))
@@ -290,8 +337,11 @@ def book_ticket():
             dep_time=train.dep_time,
             seat_no=seat,
             price=train.price,
+            board_stop=board_stop,
+            alight_stop=alight_stop,
         )
         db.session.add(new_order)
+        refresh_train_remaining_seats(train)
         db.session.commit()
         flash("订票成功，订单已生成", "success")
 
@@ -323,6 +373,202 @@ def book_ticket():
     )
 
 
+@main_bp.route("/book_transfer", methods=["POST"])
+@permission_required("ticket_module", "book")
+def book_transfer():
+    first_train_id = request.form.get("first_train_id", "").strip()
+    second_train_id = request.form.get("second_train_id", "").strip()
+    start_station = request.form.get("start_station", "").strip()
+    transfer_station = request.form.get("transfer_station", "").strip()
+    end_station = request.form.get("end_station", "").strip()
+    seat_type = request.form.get("seat_type")
+
+    if not all(
+        [first_train_id, second_train_id, start_station, transfer_station, end_station]
+    ):
+        flash("中转下单失败：参数不完整", "error")
+        return redirect(url_for("main.index"))
+
+    first_train = Train.query.get(first_train_id)
+    second_train = Train.query.get(second_train_id)
+    if not first_train or not second_train:
+        flash("中转下单失败：未找到对应车次", "error")
+        return redirect(url_for("main.index"))
+    if first_train.train_id == second_train.train_id:
+        flash("中转下单失败：两段车次不能相同", "error")
+        return redirect(url_for("main.index"))
+
+    evaluate_dynamic_allocation_if_needed(first_train)
+    evaluate_dynamic_allocation_if_needed(second_train)
+
+    if is_departed(first_train.dep_time) or is_departed(second_train.dep_time):
+        flash("中转下单失败：存在已发车车次", "error")
+        return redirect(url_for("main.index"))
+
+    if not is_valid_interval(first_train, start_station, transfer_station):
+        flash("中转下单失败：第一程区间无效", "error")
+        return redirect(url_for("main.index"))
+    if not is_valid_interval(second_train, transfer_station, end_station):
+        flash("中转下单失败：第二程区间无效", "error")
+        return redirect(url_for("main.index"))
+
+    arr_time_first = estimate_station_time(
+        first_train, transfer_station, is_departure=False
+    )
+    dep_time_second = estimate_station_time(
+        second_train, transfer_station, is_departure=True
+    )
+    if not arr_time_first or not dep_time_second:
+        flash("中转下单失败：换乘时间计算异常", "error")
+        return redirect(url_for("main.index"))
+    if dep_time_second < arr_time_first + timedelta(minutes=30):
+        flash("中转下单失败：换乘时间不足30分钟", "error")
+        return redirect(url_for("main.index"))
+
+    first_available = get_interval_available(
+        first_train, start_station, transfer_station
+    )
+    second_available = get_interval_available(
+        second_train, transfer_station, end_station
+    )
+    if first_available <= 0 or second_available <= 0:
+        flash(
+            "中转下单失败：两段车票需同时有票（"
+            f"第一程余票 {first_available}，第二程余票 {second_available}）",
+            "error",
+        )
+        return redirect(url_for("main.index"))
+
+    _, seat_one = allocate_reusable_seat(
+        first_train,
+        seat_type,
+        start_station,
+        transfer_station,
+    )
+    _, seat_two = allocate_reusable_seat(
+        second_train,
+        seat_type,
+        transfer_station,
+        end_station,
+    )
+    if not seat_one or not seat_two:
+        if not seat_one and not seat_two:
+            flash("中转下单失败：两段席位分配均失败", "error")
+        elif not seat_one:
+            flash("中转下单失败：第一程席位分配失败", "error")
+        else:
+            flash("中转下单失败：第二程席位分配失败", "error")
+        return redirect(url_for("main.index"))
+
+    try:
+        bundle = TransferBundle(user_id=session.get("user_id"), status="已出票")
+        db.session.add(bundle)
+        db.session.flush()
+
+        order1 = Order(
+            user_id=session.get("user_id"),
+            train_id=first_train.train_id,
+            train_no=first_train.train_no,
+            dep_station=first_train.dep_station,
+            arr_station=first_train.arr_station,
+            dep_time=first_train.dep_time,
+            seat_no=seat_one,
+            price=first_train.price,
+            board_stop=start_station,
+            alight_stop=transfer_station,
+            segment_span=json.dumps(
+                expand_interval_segments(first_train, start_station, transfer_station),
+                ensure_ascii=False,
+            ),
+            is_transfer_leg=True,
+            bundle_id=bundle.bundle_id,
+            status="已出票",
+        )
+        order2 = Order(
+            user_id=session.get("user_id"),
+            train_id=second_train.train_id,
+            train_no=second_train.train_no,
+            dep_station=second_train.dep_station,
+            arr_station=second_train.arr_station,
+            dep_time=second_train.dep_time,
+            seat_no=seat_two,
+            price=second_train.price,
+            board_stop=transfer_station,
+            alight_stop=end_station,
+            segment_span=json.dumps(
+                expand_interval_segments(second_train, transfer_station, end_station),
+                ensure_ascii=False,
+            ),
+            is_transfer_leg=True,
+            bundle_id=bundle.bundle_id,
+            status="已出票",
+        )
+        db.session.add_all([order1, order2])
+
+        refresh_train_remaining_seats(first_train)
+        refresh_train_remaining_seats(second_train)
+        db.session.commit()
+        flash(
+            "中转预订成功："
+            f"{first_train.train_no}({start_station}->{transfer_station}) + "
+            f"{second_train.train_no}({transfer_station}->{end_station})",
+            "success",
+        )
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception("book_transfer failed: %s", exc)
+        flash("中转下单失败，请稍后重试", "error")
+        return redirect(url_for("main.index"))
+
+    orders = get_user_orders(session.get("user_id"))
+    active_orders = get_active_orders(session.get("user_id"))
+    return render_template(
+        "index.html",
+        active_tab="orders",
+        latest_order=order2,
+        orders=orders,
+        active_orders=active_orders,
+        now_time=datetime.now(),
+    )
+
+
+@main_bp.route("/join_waitlist", methods=["POST"])
+@permission_required("ticket_module", "book")
+def join_waitlist():
+    train_id = request.form.get("train_id", "").strip()
+    start_station = request.form.get("start_station", "").strip()
+    end_station = request.form.get("end_station", "").strip()
+
+    train = Train.query.get(train_id)
+    if not train:
+        flash("候补提交失败：未找到对应车次", "error")
+        return redirect(url_for("main.index"))
+
+    evaluate_dynamic_allocation_if_needed(train)
+    if not is_valid_interval(train, start_station, end_station):
+        flash("候补提交失败：区间无效", "error")
+        return redirect(url_for("main.index"))
+
+    if get_interval_available(train, start_station, end_station) > 0:
+        flash("该区间当前有票，请直接购票", "success")
+        return redirect(url_for("main.index"))
+
+    wait, created = enqueue_waitlist_if_needed(
+        session.get("user_id"),
+        train,
+        start_station,
+        end_station,
+    )
+    if created:
+        db.session.add(wait)
+        db.session.commit()
+        flash("候补提交成功，系统将按先卖长后卖短+提交时间兑现", "success")
+    else:
+        flash("该区间已在候补队列中，请勿重复提交", "error")
+
+    return redirect(url_for("main.index"))
+
+
 @main_bp.route("/orders_ui")
 @permission_required("ticket_module", "refund")
 def orders_ui():
@@ -352,8 +598,8 @@ def delete_order(order_id):
         try:
             train = Train.query.get(order.train_id)
             if train:
+                evaluate_dynamic_allocation_if_needed(train)
                 train.seat_map = free_seat(train.seat_map, order.seat_no)
-                train.rem_seats += 1
 
             refund_success_message = (
                 "退票成功："
@@ -363,10 +609,17 @@ def delete_order(order_id):
             )
 
             db.session.delete(order)
+            wait_messages = []
+            if train:
+                wait_messages = fulfill_waitlists_after_refund(train, db)
+                refresh_train_remaining_seats(train)
             db.session.commit()
             flash(refund_success_message, "success")
+            for msg in wait_messages:
+                flash(msg, "success")
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return jsonify({"success": True, "message": refund_success_message})
+                merged = [refund_success_message] + wait_messages
+                return jsonify({"success": True, "message": "；".join(merged)})
         except Exception as exc:
             db.session.rollback()
             current_app.logger.exception("delete_order failed: %s", exc)
@@ -397,8 +650,8 @@ def do_reschedule():
         flash("改签请求无效，请刷新页面后重试", "error")
         return redirect(url_for("main.orders_ui"))
 
-    if not new_train or new_train.rem_seats <= 0:
-        flash("改签失败：目标车次不存在或余票不足", "error")
+    if not new_train:
+        flash("改签失败：目标车次不存在", "error")
         return redirect(url_for("main.orders_ui"))
 
     old_train = Train.query.get(order.train_id)
@@ -423,10 +676,9 @@ def do_reschedule():
 
     old_date = old_train.dep_time.date()
     new_date = new_train.dep_time.date()
-    same_interval = (
-        new_train.dep_station == old_train.dep_station
-        and new_train.arr_station == old_train.arr_station
-    )
+    order_start = order.board_stop or order.dep_station
+    order_end = order.alight_stop or order.arr_station
+    same_interval = is_valid_interval(new_train, order_start, order_end)
     same_day_same_interval = same_interval and new_date == old_date
     same_train_diff_day = (
         new_train.train_no == old_train.train_no and new_date != old_date
@@ -438,7 +690,17 @@ def do_reschedule():
         flash("改签失败：仅支持同日同区间改签或同车次改期", "error")
         return redirect(url_for("main.orders_ui"))
 
-    new_map, new_seat = allocate_seat_by_type(new_train.seat_map, seat_type)
+    evaluate_dynamic_allocation_if_needed(new_train)
+    if get_interval_available(new_train, order_start, order_end) <= 0:
+        flash("改签失败：目标车次该区间无票", "error")
+        return redirect(url_for("main.orders_ui"))
+
+    new_map, new_seat = allocate_reusable_seat(
+        new_train,
+        seat_type,
+        order_start,
+        order_end,
+    )
     if not new_seat:
         flash("改签失败：目标车次席位不足", "error")
         return redirect(url_for("main.orders_ui"))
@@ -459,7 +721,11 @@ def do_reschedule():
         order.dep_station = new_train.dep_station
         order.arr_station = new_train.arr_station
         order.dep_time = new_train.dep_time
+        order.board_stop = order_start
+        order.alight_stop = order_end
 
+        refresh_train_remaining_seats(old_train)
+        refresh_train_remaining_seats(new_train)
         db.session.commit()
         flash(
             "改签成功："
@@ -536,10 +802,40 @@ def update_profile():
 @main_bp.route("/trains")
 @permission_required("train_module", "manage")
 def trains_page():
+    trains = Train.query.order_by(Train.train_no.asc(), Train.dep_time.asc()).all()
+    for train in trains:
+        evaluate_dynamic_allocation_if_needed(train)
+        refresh_train_remaining_seats(train)
+        train.route_stations = get_route_stations(train)
+        train.allocation_report = build_allocation_report(train)
+    db.session.commit()
     return render_template(
         "index.html",
         active_tab="trains",
-        trains=Train.query.order_by(Train.train_no.asc(), Train.dep_time.asc()).all(),
+        trains=trains,
+    )
+
+
+@main_bp.route("/admin_allocation_report/<train_id>")
+@permission_required("train_module", "manage")
+def admin_allocation_report(train_id):
+    train = Train.query.get(train_id)
+    if not train:
+        return jsonify({"success": False, "message": "未找到该车次"}), 404
+
+    evaluate_dynamic_allocation_if_needed(train)
+    refresh_train_remaining_seats(train)
+    report = build_allocation_report(train)
+    db.session.commit()
+
+    return jsonify(
+        {
+            "success": True,
+            "train_id": train.train_id,
+            "train_no": train.train_no,
+            "dep_time": train.dep_time.strftime("%Y-%m-%d %H:%M"),
+            "report": report,
+        }
     )
 
 
@@ -616,6 +912,7 @@ def admin_manage_train():
             price = float(request.form.get("price", 0))
             total_seats = int(request.form.get("total_seats", 0))
             carriage_count = int(request.form.get("carriage_count", 5))
+            stops_text = request.form.get("stop_stations", "").strip()
         except ValueError:
             flash("时间或数值格式不正确，请检查后重试", "error")
             return redirect(url_for("main.trains_page"))
@@ -645,6 +942,17 @@ def admin_manage_train():
         )
         try:
             db.session.add(t)
+            db.session.flush()
+            template = upsert_route_template(
+                train_no=train_no,
+                dep_station=dep_station,
+                arr_station=arr_station,
+                total_seats=total_seats,
+                db=db,
+                stops_text=stops_text,
+            )
+            t.route_template_id = template.template_id
+            refresh_train_remaining_seats(t)
             db.session.commit()
             flash(f"车次 {train_no} 新增成功", "success")
         except Exception as exc:
@@ -681,6 +989,7 @@ def admin_manage_train():
             price = float(request.form.get("price", 0))
             total_seats = int(request.form.get("total_seats", 0))
             carriage_count = int(request.form.get("carriage_count", 5))
+            stops_text = request.form.get("stop_stations", "").strip()
         except ValueError:
             flash("时间或数值格式不正确，请检查后重试", "error")
             return redirect(url_for("main.trains_page"))
@@ -717,7 +1026,16 @@ def admin_manage_train():
             train.carriage_count = carriage_count
             train.seat_map = resize_seat_map(train.seat_map, total_seats)
             train.total_seats = total_seats
-            train.rem_seats = total_seats - booked_count
+            template = upsert_route_template(
+                train_no=train_no,
+                dep_station=dep_station,
+                arr_station=arr_station,
+                total_seats=total_seats,
+                db=db,
+                stops_text=stops_text,
+            )
+            train.route_template_id = template.template_id
+            refresh_train_remaining_seats(train)
 
             db.session.commit()
             flash(f"车次 {train_no} 信息已更新", "success")

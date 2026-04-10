@@ -26,7 +26,7 @@
 
             <div class="oc-body" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <div class="oc-station" style="text-align: center;">
-                    <div style="font-size: 22px; font-weight: 700; color: var(--text-main);">{{ order.train.dep_station }}</div>
+                    <div style="font-size: 22px; font-weight: 700; color: var(--text-main);">{{ order.board_stop or order.train.dep_station }}</div>
                     <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">{{ order.train.dep_time.strftime('%H:%M') }}</div>
                 </div>
 
@@ -39,7 +39,7 @@
                 </div>
 
                 <div class="oc-station" style="text-align: center;">
-                    <div style="font-size: 22px; font-weight: 700; color: var(--text-main);">{{ order.train.arr_station }}</div>
+                    <div style="font-size: 22px; font-weight: 700; color: var(--text-main);">{{ order.alight_stop or order.train.arr_station }}</div>
                     <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">{{ order.train.arr_time.strftime('%H:%M') }}</div>
                 </div>
             </div>
@@ -52,7 +52,7 @@
                 <div class="oc-actions" id="actions-{{ order.order_id }}">
                     {% if (order.status == '已出票' or order.status == '已改签') and order.dep_time > now_time %}
                         <button class="btn btn-outline btn-sm action-refund" data-order-id="{{ order.order_id }}" style="color:var(--danger-color); border-color:#fca5a5; padding: 4px 12px; font-size: 13px;">申请退票</button>
-                        <button class="btn btn-primary btn-sm action-reschedule" data-order-id="{{ order.order_id }}" data-dep-station="{{ order.train.dep_station }}" data-arr-station="{{ order.train.arr_station }}" data-date="{{ order.dep_time.strftime('%Y-%m-%d') }}" style="padding: 4px 12px; font-size: 13px;">办理改签</button>
+                        <button class="btn btn-primary btn-sm action-reschedule" data-order-id="{{ order.order_id }}" data-dep-station="{{ order.board_stop or order.train.dep_station }}" data-arr-station="{{ order.alight_stop or order.train.arr_station }}" data-date="{{ order.dep_time.strftime('%Y-%m-%d') }}" style="padding: 4px 12px; font-size: 13px;">办理改签</button>
                     {% elif order.status == '已出票' or order.status == '已改签' %}
                     <span style="font-size:13px; color:#9ca3af;">已发车</span>
                     {% else %}
