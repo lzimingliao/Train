@@ -1,3 +1,3 @@
-from flask_sqlalchemy import SQLAlchemy
+from train_app.extensions import db
 
-db = SQLAlchemy()
+__all__ = ["db"]
